@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowRight, Loader2, KeyRound, Smartphone, User, Lock, Ticket } from "lucide-react";
 import Link from "next/link";
+import { OtpInput } from "@/components/ui/OtpInput";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -20,8 +21,8 @@ export default function RegisterPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setLoading(true);
     setError(null);
     
@@ -50,8 +51,8 @@ export default function RegisterPage() {
     }
   };
 
-  const handleVerifyAndRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleVerifyAndRegister = async (e?: React.FormEvent, codeToVerify?: string) => {
+    if (e) e.preventDefault();
     setLoading(true);
     setError(null);
     
@@ -67,7 +68,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/verify-register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: formattedPhone, otp, password, name, role }),
+        body: JSON.stringify({ phone: formattedPhone, otp: codeToVerify || otp, password, name, role }),
       });
 
       const data = await res.json();
@@ -215,40 +216,21 @@ export default function RegisterPage() {
           </form>
         ) : (
           <form onSubmit={handleVerifyAndRegister} className="space-y-6">
-            <div className="space-y-2">
-              <label htmlFor="otp" className="text-sm font-bold text-primary block">6-Digit Code</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
-                  <KeyRound size={20} />
-                </div>
-                <input
-                  id="otp"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  placeholder="000000"
-                  className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-primary font-bold text-center tracking-[0.5em]"
-                  required
-                />
-              </div>
+            <div className="space-y-6">
+              <label className="text-sm font-bold text-primary block text-center mb-4">6-Digit Code</label>
+              <OtpInput 
+                length={6} 
+                onComplete={(code) => {
+                  setOtp(code);
+                  handleVerifyAndRegister(undefined, code);
+                }} 
+                error={error} 
+                loading={loading}
+                onResend={() => handleSendOtp()}
+              />
             </div>
-            
-            <button
-              type="submit"
-              disabled={loading || otp.length !== 6}
-              className={`w-full text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed ${role === 'organizer' ? 'bg-accent hover:bg-opacity-90' : 'bg-primary hover:bg-opacity-90'}`}
-            >
-              {loading ? (
-                <Loader2 size={20} className="animate-spin" />
-              ) : (
-                "Create Account & Login"
-              )}
-            </button>
 
-            <div className="text-center mt-4">
+            <div className="text-center mt-4 pt-4 border-t border-border">
               <button 
                 type="button" 
                 onClick={() => setStep("details")}

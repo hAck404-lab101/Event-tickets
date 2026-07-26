@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, KeyRound, Smartphone, Lock } from "lucide-react";
 import Link from "next/link";
+import { OtpInput } from "@/components/ui/OtpInput";
 
 export default function ForgotPasswordPage() {
   const [phone, setPhone] = useState("");
@@ -18,8 +19,8 @@ export default function ForgotPasswordPage() {
   
   const router = useRouter();
 
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setLoading(true);
     setError(null);
     
@@ -172,29 +173,22 @@ export default function ForgotPasswordPage() {
             )}
 
             {step === "verify" && (
-              <form onSubmit={handleResetPassword} className="space-y-6">
-                <div className="space-y-2">
-                  <label htmlFor="otp" className="text-sm font-bold text-primary block">6-Digit Code</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
-                      <KeyRound size={20} />
-                    </div>
-                    <input
-                      id="otp"
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={6}
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                      placeholder="000000"
-                      className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-primary font-bold text-center tracking-[0.5em]"
-                      required
-                    />
-                  </div>
+              <div className="space-y-6">
+                <div className="space-y-2 mb-8">
+                  <label className="text-sm font-bold text-primary block text-center mb-4">6-Digit Code</label>
+                  <OtpInput 
+                    length={6} 
+                    onComplete={(code) => {
+                      setOtp(code);
+                    }} 
+                    error={error} 
+                    loading={loading}
+                    onResend={() => handleSendOtp()}
+                  />
                 </div>
 
-                <div className="space-y-2">
+                <form onSubmit={handleResetPassword} className="space-y-6 pt-6 border-t border-border">
+                  <div className="space-y-2">
                   <label htmlFor="password" className="text-sm font-bold text-primary block">New Password</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
@@ -252,6 +246,7 @@ export default function ForgotPasswordPage() {
                   </button>
                 </div>
               </form>
+            </div>
             )}
 
             <div className="mt-8 text-center border-t border-border pt-6">
