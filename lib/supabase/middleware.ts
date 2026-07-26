@@ -31,20 +31,34 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   // Define protected routes
-  const isProtectedRoute = request.nextUrl.pathname.startsWith('/organizer') || request.nextUrl.pathname.startsWith('/account')
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/login')
+  const isOrganizerRoute = request.nextUrl.pathname.startsWith('/organizer')
+  const isAccountRoute = request.nextUrl.pathname.startsWith('/account')
+  const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/register')
 
-  if (isProtectedRoute && !user) {
-    // Demo Mode: Disabled redirect to allow viewing dashboards without logging in
-    // const url = request.nextUrl.clone()
-    // url.pathname = '/login'
-    // return NextResponse.redirect(url)
+  if ((isOrganizerRoute || isAccountRoute) && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
+  const role = user?.user_metadata?.role || 'user';
+
+  if (isOrganizerRoute && user && role !== 'organizer') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/account'
+    return NextResponse.redirect(url)
+  }
+
+  if (isAccountRoute && user && role === 'organizer') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/organizer/dashboard'
+    return NextResponse.redirect(url)
   }
 
   if (isAuthRoute && user) {
-    // Redirect to account dashboard if logged in and on login route
+    // Redirect to proper dashboard if logged in and on auth route
     const url = request.nextUrl.clone()
-    url.pathname = '/account'
+    url.pathname = role === 'organizer' ? '/organizer/dashboard' : '/account'
     return NextResponse.redirect(url)
   }
 
