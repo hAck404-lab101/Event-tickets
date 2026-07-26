@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
-import { CalendarDays, Clock3, MapPin, Share2, Ticket } from "lucide-react";
+import { CalendarDays, Clock3, MapPin, Share2, Ticket, ArrowLeft } from "lucide-react";
 import TicketCheckout from "@/components/ticket-checkout";
 import { events, getEventById, formatGhs } from "@/lib/events";
+import Link from "next/link";
 
 export function generateStaticParams() {
   return events.map((event) => ({ id: event.id }));
@@ -15,32 +16,92 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const lowestPrice = Math.min(...event.ticketTypes.map((ticket) => ticket.price));
 
   return (
-    <main>
-      <header className="nav shell">
-        <a className="brand" href="/"><span><Ticket size={19} /></span>Tixly</a>
-        <a className="back-link" href="/">← Back to events</a>
-      </header>
-
-      <section className="event-hero shell">
-        <div className="event-hero-image" style={{ backgroundImage: `linear-gradient(180deg, transparent, rgba(8,8,12,.75)), url(${event.image})` }}>
-          <span className="event-category">{event.category}</span>
-          <div><p>From {formatGhs(lowestPrice)}</p><h1>{event.title}</h1></div>
+    <main className="min-h-screen bg-background pb-24">
+      <nav className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 text-primary group">
+            <div className="bg-primary text-white p-2 rounded-xl group-hover:bg-accent transition-colors">
+              <Ticket size={24} />
+            </div>
+            <span className="text-2xl font-serif font-bold tracking-tight">Tixly</span>
+          </Link>
+          <Link href="/events/explore" className="text-sm font-bold text-muted hover:text-primary transition-colors flex items-center gap-2">
+            <ArrowLeft size={16} /> Back to events
+          </Link>
         </div>
-      </section>
+      </nav>
 
-      <section className="event-detail-layout shell">
-        <div className="event-information">
-          <div className="event-actions"><span>Hosted by <strong>{event.organizer}</strong></span><button><Share2 size={17} /> Share</button></div>
-          <div className="detail-grid">
-            <article><CalendarDays size={21} /><span><small>Date</small><strong>{event.date}</strong></span></article>
-            <article><Clock3 size={21} /><span><small>Time</small><strong>{event.time}</strong></span></article>
-            <article><MapPin size={21} /><span><small>Venue</small><strong>{event.venue}, {event.city}</strong></span></article>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <section className="relative w-full h-[400px] sm:h-[500px] rounded-[2rem] overflow-hidden mb-12 shadow-xl">
+          <div 
+            className="absolute inset-0 bg-cover bg-center" 
+            style={{ backgroundImage: `url(${event.image})` }} 
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+          
+          <div className="absolute bottom-0 left-0 right-0 p-8 sm:p-12 flex flex-col justify-end">
+            <span className="self-start bg-white/90 text-primary text-xs font-bold px-4 py-2 rounded-lg uppercase tracking-wider mb-6 backdrop-blur-sm">
+              {event.category}
+            </span>
+            <p className="text-white/80 font-bold mb-2">From {formatGhs(lowestPrice)}</p>
+            <h1 className="text-4xl sm:text-6xl font-serif font-bold text-white max-w-4xl leading-tight">
+              {event.title}
+            </h1>
           </div>
-          <div className="about-event"><p className="eyebrow">About this event</p><h2>What to expect</h2><p>{event.description}</p></div>
-          <div className="event-notice"><strong>Important</strong><p>Bring a valid ticket QR code and a matching form of identification. Tickets are only valid once.</p></div>
-        </div>
-        <TicketCheckout event={event} />
-      </section>
+        </section>
+
+        <section className="flex flex-col lg:flex-row gap-12 items-start">
+          <div className="flex-1 w-full space-y-12">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pb-8 border-b border-border">
+              <span className="text-muted text-lg">
+                Hosted by <strong className="text-primary">{event.organizer}</strong>
+              </span>
+              <button className="flex items-center gap-2 bg-surface border border-border px-4 py-2 rounded-xl font-bold hover:bg-background transition-colors shadow-sm">
+                <Share2 size={18} /> Share
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <article className="bg-surface p-6 rounded-2xl border border-border flex flex-col gap-3 shadow-sm">
+                <div className="p-3 bg-background rounded-xl w-fit text-primary"><CalendarDays size={24} /></div>
+                <div>
+                  <small className="block text-muted font-bold text-xs uppercase tracking-wider mb-1">Date</small>
+                  <strong className="text-lg text-primary">{event.date}</strong>
+                </div>
+              </article>
+              <article className="bg-surface p-6 rounded-2xl border border-border flex flex-col gap-3 shadow-sm">
+                <div className="p-3 bg-background rounded-xl w-fit text-primary"><Clock3 size={24} /></div>
+                <div>
+                  <small className="block text-muted font-bold text-xs uppercase tracking-wider mb-1">Time</small>
+                  <strong className="text-lg text-primary">{event.time}</strong>
+                </div>
+              </article>
+              <article className="bg-surface p-6 rounded-2xl border border-border flex flex-col gap-3 shadow-sm">
+                <div className="p-3 bg-background rounded-xl w-fit text-primary"><MapPin size={24} /></div>
+                <div>
+                  <small className="block text-muted font-bold text-xs uppercase tracking-wider mb-1">Venue</small>
+                  <strong className="text-lg text-primary leading-tight block">{event.venue}, {event.city}</strong>
+                </div>
+              </article>
+            </div>
+
+            <div className="space-y-6">
+              <p className="text-accent text-sm font-bold uppercase tracking-wider">About this event</p>
+              <h2 className="text-3xl font-serif font-bold text-primary">What to expect</h2>
+              <p className="text-muted text-lg leading-relaxed whitespace-pre-wrap">{event.description}</p>
+            </div>
+
+            <div className="bg-accent/10 border border-accent/20 rounded-2xl p-6">
+              <strong className="block text-accent font-bold mb-2">Important</strong>
+              <p className="text-primary/80 leading-relaxed">Bring a valid ticket QR code and a matching form of identification. Tickets are only valid once.</p>
+            </div>
+          </div>
+          
+          <div className="w-full lg:w-[420px] lg:sticky lg:top-28 shrink-0">
+            <TicketCheckout event={event} />
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

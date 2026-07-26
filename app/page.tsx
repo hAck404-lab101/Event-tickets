@@ -9,7 +9,7 @@ const mockEvents = [
     venue: "Untamed Empire, Accra",
     price: "₵ 120",
     category: "Music",
-    image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=80",
+    image: "/images/accra-night-live.jpg",
   },
   {
     id: "creative-business-summit",
@@ -18,7 +18,7 @@ const mockEvents = [
     venue: "AICC, Accra",
     price: "₵ 80",
     category: "Business",
-    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80",
+    image: "/images/business-summit.jpg",
   },
   {
     id: "food-and-culture-fest",
@@ -27,7 +27,7 @@ const mockEvents = [
     venue: "Jubilee Park, Ho",
     price: "₵ 50",
     category: "Lifestyle",
-    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80",
+    image: "/images/culture-fest.jpg",
   },
 ];
 
@@ -98,7 +98,7 @@ export default function HomePage() {
         <div className="flex-1 relative w-full max-w-lg lg:max-w-none hidden sm:block">
           <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden relative shadow-2xl">
             <img 
-              src="https://images.unsplash.com/photo-1540039155732-68045610cc4a?auto=format&fit=crop&w=1200&q=80" 
+              src="/images/hero-concert.jpg" 
               alt="Live concert"
               className="w-full h-full object-cover"
             />

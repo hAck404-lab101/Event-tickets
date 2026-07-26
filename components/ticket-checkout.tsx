@@ -25,7 +25,7 @@ export default function TicketCheckout({ event }: Props) {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/orders", {
+      const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -35,13 +35,15 @@ export default function TicketCheckout({ event }: Props) {
           ticketName: ticket.name,
           quantity,
           unitPrice: ticket.price,
-          customer
+          customerEmail: customer.email,
+          customerPhone: customer.phone,
+          customerName: customer.name
         })
       });
 
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Unable to start checkout");
-      window.location.href = result.checkoutUrl;
+      window.location.href = result.paymentUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to start checkout");
       setLoading(false);
@@ -49,52 +51,125 @@ export default function TicketCheckout({ event }: Props) {
   }
 
   return (
-    <form className="checkout-card" onSubmit={handleCheckout}>
-      <div>
-        <p className="eyebrow">Choose your ticket</p>
-        <h2>Reserve your spot</h2>
+    <form className="bg-surface p-6 sm:p-8 rounded-[2rem] border border-border shadow-2xl" onSubmit={handleCheckout}>
+      <div className="mb-8">
+        <p className="text-accent text-sm font-bold uppercase tracking-wider mb-2">Choose your ticket</p>
+        <h2 className="text-3xl font-serif font-bold text-primary">Reserve your spot</h2>
       </div>
 
-      <div className="ticket-options">
+      <div className="space-y-3 mb-8">
         {event.ticketTypes.map((item) => (
           <button
             type="button"
             key={item.id}
-            className={ticketId === item.id ? "ticket-option selected" : "ticket-option"}
+            className={`w-full text-left p-4 rounded-2xl border transition-all duration-200 flex justify-between items-center ${
+              ticketId === item.id 
+                ? "border-primary bg-primary/5 ring-1 ring-primary" 
+                : "border-border bg-background hover:border-primary/40"
+            }`}
             onClick={() => { setTicketId(item.id); setQuantity(1); }}
           >
-            <span><strong>{item.name}</strong><small>{item.description}</small></span>
-            <strong>{formatGhs(item.price)}</strong>
+            <div>
+              <strong className="block text-primary font-bold mb-1">{item.name}</strong>
+              <small className="block text-muted">{item.description}</small>
+            </div>
+            <strong className="text-lg text-primary">{formatGhs(item.price)}</strong>
           </button>
         ))}
       </div>
 
-      <div className="quantity-row">
-        <span><strong>Quantity</strong><small>Maximum 10 tickets</small></span>
-        <div className="stepper">
-          <button type="button" aria-label="Reduce quantity" onClick={() => setQuantity((q) => Math.max(1, q - 1))}><Minus size={17} /></button>
-          <strong>{quantity}</strong>
-          <button type="button" aria-label="Increase quantity" onClick={() => setQuantity((q) => Math.min(10, q + 1))}><Plus size={17} /></button>
+      <div className="flex items-center justify-between py-5 border-y border-border mb-8">
+        <div>
+          <strong className="block text-primary">Quantity</strong>
+          <small className="text-muted text-sm">Maximum 10 tickets</small>
+        </div>
+        <div className="flex items-center gap-4 bg-background border border-border rounded-xl p-1">
+          <button 
+            type="button" 
+            aria-label="Reduce quantity" 
+            className="w-10 h-10 rounded-lg flex items-center justify-center text-primary hover:bg-surface disabled:opacity-50"
+            onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+            disabled={quantity <= 1}
+          >
+            <Minus size={18} />
+          </button>
+          <strong className="text-lg w-4 text-center text-primary">{quantity}</strong>
+          <button 
+            type="button" 
+            aria-label="Increase quantity" 
+            className="w-10 h-10 rounded-lg flex items-center justify-center text-primary hover:bg-surface disabled:opacity-50"
+            onClick={() => setQuantity((q) => Math.min(10, q + 1))}
+            disabled={quantity >= 10}
+          >
+            <Plus size={18} />
+          </button>
         </div>
       </div>
 
-      <div className="customer-grid">
-        <label>Full name<input required value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} placeholder="Ama Mensah" /></label>
-        <label>Email<input required type="email" value={customer.email} onChange={(e) => setCustomer({ ...customer, email: e.target.value })} placeholder="ama@example.com" /></label>
-        <label>Phone number<input required value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} placeholder="+233 24 000 0000" /></label>
+      <div className="space-y-4 mb-8">
+        <div>
+          <label className="block text-sm font-bold text-primary mb-2">Full name</label>
+          <input 
+            required 
+            value={customer.name} 
+            onChange={(e) => setCustomer({ ...customer, name: e.target.value })} 
+            placeholder="Ama Mensah" 
+            className="w-full bg-background border border-border rounded-xl p-3.5 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-primary placeholder:text-muted/60"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-bold text-primary mb-2">Email</label>
+          <input 
+            required 
+            type="email" 
+            value={customer.email} 
+            onChange={(e) => setCustomer({ ...customer, email: e.target.value })} 
+            placeholder="ama@example.com" 
+            className="w-full bg-background border border-border rounded-xl p-3.5 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-primary placeholder:text-muted/60"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-bold text-primary mb-2">Phone number</label>
+          <input 
+            required 
+            value={customer.phone} 
+            onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} 
+            placeholder="+233 24 000 0000" 
+            className="w-full bg-background border border-border rounded-xl p-3.5 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-primary placeholder:text-muted/60"
+          />
+        </div>
       </div>
 
-      <div className="summary-lines">
-        <p><span>Tickets</span><strong>{formatGhs(subtotal)}</strong></p>
-        <p><span>Service fee</span><strong>{formatGhs(serviceFee)}</strong></p>
-        <p className="total"><span>Total</span><strong>{formatGhs(total)}</strong></p>
+      <div className="border-t border-border pt-6 space-y-3 mb-8">
+        <p className="flex justify-between text-muted font-medium">
+          <span>Tickets</span>
+          <strong className="text-primary">{formatGhs(subtotal)}</strong>
+        </p>
+        <p className="flex justify-between text-muted font-medium pb-4 border-b border-border">
+          <span>Service fee</span>
+          <strong className="text-primary">{formatGhs(serviceFee)}</strong>
+        </p>
+        <p className="flex justify-between items-center pt-2">
+          <span className="text-primary font-bold">Total</span>
+          <strong className="text-2xl font-serif text-primary">{formatGhs(total)}</strong>
+        </p>
       </div>
 
-      {error && <p className="form-error" role="alert">{error}</p>}
-      <button className="pay-button" disabled={loading}>
-        {loading ? <><LoaderCircle className="spin" size={19} /> Creating invoice...</> : `Pay ${formatGhs(total)}`}
+      {error && <p className="bg-error-bg text-error p-4 rounded-xl text-sm font-medium mb-6" role="alert">{error}</p>}
+      
+      <button 
+        className="w-full bg-primary text-white py-4 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-opacity-90 transition-all disabled:opacity-70 disabled:cursor-not-allowed" 
+        disabled={loading}
+      >
+        {loading ? (
+          <><LoaderCircle className="animate-spin" size={20} /> Processing...</>
+        ) : (
+          `Pay ${formatGhs(total)}`
+        )}
       </button>
-      <small className="secure-note">You will be redirected to the secure invoice checkout page.</small>
+      <p className="text-center text-muted text-xs font-medium mt-4">
+        You will be redirected to the secure DoronX invoice checkout page.
+      </p>
     </form>
   );
 }

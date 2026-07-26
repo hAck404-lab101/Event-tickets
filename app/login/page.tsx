@@ -20,8 +20,13 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     
-    // Ensure format matches Supabase requirements (+[country_code][number])
-    const formattedPhone = phone.startsWith("+") ? phone : \`+\${phone}\`;
+    // Format Ghanaian phone numbers (e.g., 054... -> +23354...)
+    let formattedPhone = phone.trim();
+    if (formattedPhone.startsWith("0") && formattedPhone.length === 10) {
+      formattedPhone = `+233${formattedPhone.substring(1)}`;
+    } else if (!formattedPhone.startsWith("+")) {
+      formattedPhone = `+${formattedPhone}`;
+    }
     
     try {
       const { error } = await supabase.auth.signInWithOtp({
@@ -41,8 +46,12 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
-    const formattedPhone = phone.startsWith("+") ? phone : \`+\${phone}\`;
+    let formattedPhone = phone.trim();
+    if (formattedPhone.startsWith("0") && formattedPhone.length === 10) {
+      formattedPhone = `+233${formattedPhone.substring(1)}`;
+    } else if (!formattedPhone.startsWith("+")) {
+      formattedPhone = `+${formattedPhone}`;
+    }
 
     try {
       const { error, data } = await supabase.auth.verifyOtp({
@@ -77,7 +86,7 @@ export default function LoginPage() {
           <p className="text-muted text-sm">
             {step === "phone" 
               ? "Enter your phone number to securely log in or create a new account." 
-              : \`We sent a 6-digit code to \${phone}\`}
+              : `We sent a 6-digit code to ${phone}`}
           </p>
         </div>
 

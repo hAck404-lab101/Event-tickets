@@ -6,7 +6,7 @@ export default function ExploreEvents() {
     <div className="bg-background min-h-screen pb-20">
       {/* Navbar placeholder - assuming root layout handles this, but for isolation we'll skip complex nav here */}
       <div className="bg-surface border-b border-border sticky top-0 z-20">
-        <div className="shell py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <Link href="/" className="font-bold text-lg font-serif">Tixly</Link>
           <div className="hidden md:flex bg-background border border-border rounded-full px-4 py-2 w-96 flex-1 max-w-lg mx-8 focus-within:border-primary transition-colors">
             <Search size={18} className="text-muted mr-3 mt-0.5" />
@@ -22,7 +22,7 @@ export default function ExploreEvents() {
         </div>
       </div>
 
-      <div className="shell mt-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         <h1 className="text-4xl font-serif font-bold text-primary mb-2">Explore Events</h1>
         <p className="text-muted text-lg mb-8">Discover what's happening in your city and beyond.</p>
 
