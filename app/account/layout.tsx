@@ -21,7 +21,13 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        setUserProfile(profile || { first_name: 'User', last_name: '', email: user.email, phone: user.phone });
+        
+        const metaName = user.user_metadata?.name || user.user_metadata?.full_name || 'User';
+        const nameParts = metaName.split(' ');
+        const firstName = profile?.first_name || nameParts[0];
+        const lastName = profile?.last_name || nameParts.slice(1).join(' ');
+
+        setUserProfile(profile ? { ...profile, first_name: firstName, last_name: lastName } : { first_name: firstName, last_name: lastName, email: user.email, phone: user.phone });
       }
     };
     fetchUser();

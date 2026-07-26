@@ -4,6 +4,12 @@ export default async function AccountProfile() {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user?.id).single();
+  
+  const metaName = user?.user_metadata?.name || user?.user_metadata?.full_name || '';
+  const nameParts = metaName.split(' ');
+  const firstName = profile?.first_name || nameParts[0] || '';
+  const lastName = profile?.last_name || nameParts.slice(1).join(' ') || '';
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-serif font-bold text-primary">My Profile</h1>
@@ -13,11 +19,11 @@ export default async function AccountProfile() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-bold mb-2">First Name</label>
-              <input type="text" defaultValue={profile?.first_name || ""} className="w-full bg-background border border-border rounded-lg p-3 outline-none focus:border-primary" />
+              <input type="text" defaultValue={firstName} className="w-full bg-background border border-border rounded-lg p-3 outline-none focus:border-primary" />
             </div>
             <div>
               <label className="block text-sm font-bold mb-2">Last Name</label>
-              <input type="text" defaultValue={profile?.last_name || ""} className="w-full bg-background border border-border rounded-lg p-3 outline-none focus:border-primary" />
+              <input type="text" defaultValue={lastName} className="w-full bg-background border border-border rounded-lg p-3 outline-none focus:border-primary" />
             </div>
           </div>
           

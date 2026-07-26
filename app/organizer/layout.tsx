@@ -35,7 +35,13 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
         return;
       }
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      setUserProfile(profile || { first_name: 'Org', email: user.email });
+      
+      const metaName = user.user_metadata?.name || user.user_metadata?.full_name || 'Organizer';
+      const nameParts = metaName.split(' ');
+      const firstName = profile?.first_name || nameParts[0];
+      const lastName = profile?.last_name || nameParts.slice(1).join(' ');
+
+      setUserProfile(profile ? { ...profile, first_name: firstName, last_name: lastName } : { first_name: firstName, last_name: lastName, email: user.email });
     };
     fetchUser();
   }, [supabase, router]);
