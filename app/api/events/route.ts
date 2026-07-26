@@ -5,10 +5,14 @@ export async function POST(req: Request) {
   try {
     const supabase = createServerClient();
     
-    // Authenticate user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Authenticate user via token from client
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
+      console.error("Auth Error:", authError);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

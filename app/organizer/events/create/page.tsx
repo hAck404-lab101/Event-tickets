@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { ArrowLeft, ArrowRight, Save, Image as ImageIcon, Plus, Trash2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function EventCreateWizard() {
   const [step, setStep] = useState(1);
@@ -93,6 +94,10 @@ export default function EventCreateWizard() {
     setError(null);
 
     try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
       const payload = {
         title,
         category,
@@ -109,7 +114,10 @@ export default function EventCreateWizard() {
 
       const res = await fetch("/api/events", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
         body: JSON.stringify(payload),
       });
 
