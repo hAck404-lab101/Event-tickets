@@ -35,10 +35,10 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login')
 
   if (isProtectedRoute && !user) {
-    // Redirect to login if unauthenticated on protected routes
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+    // Demo Mode: Disabled redirect to allow viewing dashboards without logging in
+    // const url = request.nextUrl.clone()
+    // url.pathname = '/login'
+    // return NextResponse.redirect(url)
   }
 
   if (isAuthRoute && user) {

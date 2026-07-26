@@ -53,10 +53,10 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
           <div className="bg-surface rounded-2xl border border-border overflow-hidden">
             <div className="p-6 border-b border-border text-center">
               <div className="w-20 h-20 bg-primary text-white text-3xl font-bold rounded-full flex items-center justify-center mx-auto mb-4 uppercase">
-                {userProfile ? userProfile.first_name?.[0] : "U"}
+                {userProfile ? userProfile.first_name?.[0] : "A"}
               </div>
-              <h2 className="font-bold text-lg">{userProfile ? `${userProfile.first_name} ${userProfile.last_name || ''}` : 'Loading...'}</h2>
-              <p className="text-sm text-muted">{userProfile?.email || userProfile?.phone || ''}</p>
+              <h2 className="font-bold text-lg">{userProfile ? `${userProfile.first_name} ${userProfile.last_name || ''}` : 'Ama Serwaa'}</h2>
+              <p className="text-sm text-muted">{userProfile ? (userProfile.email || userProfile.phone || '') : 'ama.serwaa@example.com'}</p>
             </div>
             <nav className="p-3 space-y-1">
               {navItems.map((item) => {

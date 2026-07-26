@@ -3,6 +3,36 @@ import Link from "next/link";
 
 import { createServerClient } from "@/lib/supabase/server";
 
+const mockEvents = [
+  {
+    id: "accra-night-live",
+    title: "Accra Night Live",
+    date: "Sat, 15 Aug · 7:00 PM",
+    venue: "Untamed Empire, Accra",
+    price: "₵ 120",
+    category: "Music",
+    image: "/images/accra-night-live.jpg",
+  },
+  {
+    id: "creative-business-summit",
+    title: "Creative Business Summit",
+    date: "Fri, 28 Aug · 9:00 AM",
+    venue: "AICC, Accra",
+    price: "₵ 80",
+    category: "Business",
+    image: "/images/business-summit.jpg",
+  },
+  {
+    id: "food-and-culture-fest",
+    title: "Food & Culture Fest",
+    date: "Sun, 6 Sep · 11:00 AM",
+    venue: "Jubilee Park, Ho",
+    price: "₵ 50",
+    category: "Lifestyle",
+    image: "/images/culture-fest.jpg",
+  },
+];
+
 const categories = ["All", "Music", "Business", "Sports", "Lifestyle", "Campus"];
 
 export default async function HomePage() {
@@ -137,7 +167,7 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {events?.map((event: any) => {
+            {events && events.length > 0 ? events.map((event: any) => {
               const prices = event.ticket_types?.map((t: any) => t.price) || [];
               const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
               const formattedDate = new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + new Date(event.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -175,7 +205,40 @@ export default async function HomePage() {
                   </div>
                 </div>
               </Link>
-            )})}
+            )}) : mockEvents.map((event) => (
+              <Link href={`/events/${event.id}`} key={event.id} className="group block">
+                <div className="bg-background rounded-3xl overflow-hidden border border-border hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
+                  <div className="h-64 relative overflow-hidden">
+                    <img 
+                      src={event.image} 
+                      alt={event.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-primary px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide">
+                      {event.category}
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <p className="text-accent font-bold text-sm mb-2 flex items-center gap-2">
+                      <CalendarDays size={16} /> {event.date}
+                    </p>
+                    <h3 className="text-xl font-bold font-serif text-primary mb-3 group-hover:text-accent transition-colors">{event.title}</h3>
+                    <p className="text-muted text-sm font-medium flex items-center gap-2 mb-6">
+                      <MapPin size={16} /> {event.venue}
+                    </p>
+                    <div className="flex items-center justify-between pt-4 border-t border-border">
+                      <div>
+                        <p className="text-xs text-muted font-bold uppercase">From</p>
+                        <p className="font-bold text-lg text-primary">{event.price}</p>
+                      </div>
+                      <div className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                        <ArrowRight size={18} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

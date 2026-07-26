@@ -13,23 +13,23 @@ export default async function AccountProfile() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-bold mb-2">First Name</label>
-              <input type="text" defaultValue={profile?.first_name || ""} className="w-full bg-background border border-border rounded-lg p-3 outline-none focus:border-primary" />
+              <input type="text" defaultValue={profile?.first_name || "Ama"} className="w-full bg-background border border-border rounded-lg p-3 outline-none focus:border-primary" />
             </div>
             <div>
               <label className="block text-sm font-bold mb-2">Last Name</label>
-              <input type="text" defaultValue={profile?.last_name || ""} className="w-full bg-background border border-border rounded-lg p-3 outline-none focus:border-primary" />
+              <input type="text" defaultValue={profile?.last_name || "Serwaa"} className="w-full bg-background border border-border rounded-lg p-3 outline-none focus:border-primary" />
             </div>
           </div>
           
           <div>
             <label className="block text-sm font-bold mb-2">Email Address</label>
-            <input type="email" defaultValue={user?.email || ""} disabled className="w-full bg-border text-muted border border-border rounded-lg p-3 outline-none cursor-not-allowed" />
+            <input type="email" defaultValue={user?.email || "ama.serwaa@example.com"} disabled className="w-full bg-border text-muted border border-border rounded-lg p-3 outline-none cursor-not-allowed" />
             <p className="text-xs text-muted mt-2">To change your email address, please contact support.</p>
           </div>
 
           <div>
             <label className="block text-sm font-bold mb-2">Phone Number</label>
-            <input type="tel" defaultValue={user?.phone || ""} disabled className="w-full bg-border text-muted border border-border rounded-lg p-3 outline-none cursor-not-allowed" />
+            <input type="tel" defaultValue={user?.phone || "+233501234567"} disabled={!!user} className="w-full bg-border text-muted border border-border rounded-lg p-3 outline-none cursor-not-allowed" />
           </div>
 
           <div className="pt-4 border-t border-border">
