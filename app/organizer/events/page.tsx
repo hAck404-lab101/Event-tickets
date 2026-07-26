@@ -55,6 +55,7 @@ export default async function OrganizerEventsPage() {
               </div>
             ))}
           </div>
+        ) : (
           <div className="divide-y divide-border">
             <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-background/50 transition-colors">
               <div className="flex items-center gap-6">
@@ -102,6 +103,7 @@ export default async function OrganizerEventsPage() {
               </div>
             </div>
           </div>
+        )}
       </div>
     </div>
   );
