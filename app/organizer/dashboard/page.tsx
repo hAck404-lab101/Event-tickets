@@ -1,11 +1,28 @@
 import { CreditCard, Users, Ticket, TrendingUp, CalendarDays, Plus } from "lucide-react";
 import Link from "next/link";
+import { createServerClient } from "@/lib/supabase/server";
 
-export default function OrganizerDashboard() {
+export default async function OrganizerDashboard() {
+  const supabase = createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  // Fetch real events
+  const { data: events } = await supabase
+    .from('events')
+    .select('*')
+    .eq('organizer_id', user?.id)
+    .order('created_at', { ascending: false });
+
+  // Calculate KPIs
+  // (In a real app, you would query the orders table joined with ticket_types to sum revenue and tickets sold)
+  // For now, since the orders table is empty, we default to 0.
+  const totalRevenue = 0;
+  const ticketsSold = 0;
+
   const kpis = [
-    { title: "Net Revenue", value: "₵ 42,500.00", icon: CreditCard, trend: "+5.2%" },
-    { title: "Tickets Sold", value: "450", icon: Ticket, trend: "+12.1%" },
-    { title: "Check-ins", value: "320", icon: Users, trend: "" },
+    { title: "Net Revenue", value: `₵ ${totalRevenue.toFixed(2)}`, icon: CreditCard, trend: "" },
+    { title: "Tickets Sold", value: ticketsSold.toString(), icon: Ticket, trend: "" },
+    { title: "Active Events", value: (events?.length || 0).toString(), icon: CalendarDays, trend: "" },
   ];
 
   return (
@@ -50,30 +67,34 @@ export default function OrganizerDashboard() {
           <Link href="/organizer/events" className="text-sm font-bold hover:underline">View All</Link>
         </div>
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="border border-border rounded-xl p-5 flex flex-col justify-between hover:border-primary transition-colors">
-            <div>
-              <div className="flex justify-between items-start">
-                <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded-md">PUBLISHED</span>
-                <button className="text-sm font-bold text-primary hover:underline">Edit</button>
-              </div>
-              <h4 className="text-xl font-bold mt-4">Accra Tech Summit</h4>
-              <p className="text-muted text-sm mt-1 flex items-center gap-2">
-                <CalendarDays size={14} /> Oct 12, 2026 • 09:00 AM
-              </p>
-            </div>
-            <div className="mt-6 pt-4 border-t border-border flex justify-between">
+          {events?.map((event: any) => (
+            <div key={event.id} className="border border-border rounded-xl p-5 flex flex-col justify-between hover:border-primary transition-colors">
               <div>
-                <p className="text-xs text-muted font-medium">Sold</p>
-                <p className="font-bold">450 / 500</p>
+                <div className="flex justify-between items-start">
+                  <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase ${event.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                    {event.status}
+                  </span>
+                  <Link href={`/organizer/events/${event.id}/edit`} className="text-sm font-bold text-primary hover:underline">Edit</Link>
+                </div>
+                <h4 className="text-xl font-bold mt-4">{event.title}</h4>
+                <p className="text-muted text-sm mt-1 flex items-center gap-2">
+                  <CalendarDays size={14} /> {new Date(event.date).toLocaleDateString()}
+                </p>
               </div>
-              <div>
-                <p className="text-xs text-muted font-medium">Revenue</p>
-                <p className="font-bold">₵ 42,500</p>
+              <div className="mt-6 pt-4 border-t border-border flex justify-between">
+                <div>
+                  <p className="text-xs text-muted font-medium">Sold</p>
+                  <p className="font-bold">0 / --</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted font-medium">Revenue</p>
+                  <p className="font-bold">₵ 0</p>
+                </div>
               </div>
             </div>
-          </div>
+          ))}
           
-          <Link href="/organizer/events/create" className="border border-dashed border-border rounded-xl p-5 flex flex-col justify-center items-center text-center hover:bg-background transition-colors cursor-pointer">
+          <Link href="/organizer/events/create" className="border border-dashed border-border rounded-xl p-5 flex flex-col justify-center items-center text-center hover:bg-background transition-colors cursor-pointer min-h-[200px]">
             <div className="w-12 h-12 bg-surface border border-border rounded-full flex items-center justify-center text-muted mb-3">
               <Plus size={24} />
             </div>

@@ -1,11 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { User, Ticket, CreditCard, Settings, LogOut } from "lucide-react";
+import { createBrowserClient } from "@supabase/ssr";
+import { useEffect, useState } from "react";
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        setUserProfile(profile || { first_name: 'User', last_name: '', email: user.email, phone: user.phone });
+      }
+    };
+    fetchUser();
+  }, [supabase]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
 
   const navItems = [
     { name: "My Profile", href: "/account", icon: User },
@@ -26,11 +52,11 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
         <aside className="w-full md:w-64 shrink-0">
           <div className="bg-surface rounded-2xl border border-border overflow-hidden">
             <div className="p-6 border-b border-border text-center">
-              <div className="w-20 h-20 bg-primary text-white text-3xl font-bold rounded-full flex items-center justify-center mx-auto mb-4">
-                A
+              <div className="w-20 h-20 bg-primary text-white text-3xl font-bold rounded-full flex items-center justify-center mx-auto mb-4 uppercase">
+                {userProfile ? userProfile.first_name?.[0] : "U"}
               </div>
-              <h2 className="font-bold text-lg">Ama Serwaa</h2>
-              <p className="text-sm text-muted">ama.serwaa@example.com</p>
+              <h2 className="font-bold text-lg">{userProfile ? `${userProfile.first_name} ${userProfile.last_name || ''}` : 'Loading...'}</h2>
+              <p className="text-sm text-muted">{userProfile?.email || userProfile?.phone || ''}</p>
             </div>
             <nav className="p-3 space-y-1">
               {navItems.map((item) => {
@@ -50,7 +76,10 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                   </Link>
                 );
               })}
-              <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-error hover:bg-error-bg transition-colors mt-4">
+              <button 
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-error hover:bg-error-bg transition-colors mt-4"
+              >
                 <LogOut size={18} />
                 Sign Out
               </button>

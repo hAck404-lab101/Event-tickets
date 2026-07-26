@@ -1,39 +1,26 @@
 import { Search, CalendarDays, MapPin, ArrowRight, Ticket, User, Menu } from "lucide-react";
 import Link from "next/link";
 
-const mockEvents = [
-  {
-    id: "accra-night-live",
-    title: "Accra Night Live",
-    date: "Sat, 15 Aug · 7:00 PM",
-    venue: "Untamed Empire, Accra",
-    price: "₵ 120",
-    category: "Music",
-    image: "/images/accra-night-live.jpg",
-  },
-  {
-    id: "creative-business-summit",
-    title: "Creative Business Summit",
-    date: "Fri, 28 Aug · 9:00 AM",
-    venue: "AICC, Accra",
-    price: "₵ 80",
-    category: "Business",
-    image: "/images/business-summit.jpg",
-  },
-  {
-    id: "food-and-culture-fest",
-    title: "Food & Culture Fest",
-    date: "Sun, 6 Sep · 11:00 AM",
-    venue: "Jubilee Park, Ho",
-    price: "₵ 50",
-    category: "Lifestyle",
-    image: "/images/culture-fest.jpg",
-  },
-];
+import { createServerClient } from "@/lib/supabase/server";
 
 const categories = ["All", "Music", "Business", "Sports", "Lifestyle", "Campus"];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = createServerClient();
+  const { data: events } = await supabase
+    .from('events')
+    .select(`
+      *,
+      ticket_types (
+        price
+      )
+    `)
+    .eq('status', 'published')
+    .order('date', { ascending: true });
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const role = user?.user_metadata?.role;
+  const dashboardLink = role === 'organizer' ? '/organizer/dashboard' : '/account';
   return (
     <main className="min-h-screen bg-background">
       {/* Navigation */}
@@ -52,12 +39,20 @@ export default function HomePage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link href="/login" className="hidden md:flex items-center gap-2 text-sm font-bold text-primary hover:text-accent transition-colors">
-              Log In
-            </Link>
-            <Link href="/login" className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-accent transition-colors flex items-center gap-2">
-              <User size={18} /> Account
-            </Link>
+            {user ? (
+              <Link href={dashboardLink} className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-accent transition-colors flex items-center gap-2">
+                <User size={18} /> Account
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="hidden md:flex items-center gap-2 text-sm font-bold text-primary hover:text-accent transition-colors">
+                  Log In
+                </Link>
+                <Link href="/register" className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-accent transition-colors flex items-center gap-2">
+                  Sign Up
+                </Link>
+              </>
+            )}
             <button className="md:hidden text-primary p-2">
               <Menu size={24} />
             </button>
@@ -142,31 +137,36 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {mockEvents.map((event) => (
+            {events?.map((event: any) => {
+              const prices = event.ticket_types?.map((t: any) => t.price) || [];
+              const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+              const formattedDate = new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + new Date(event.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+              
+              return (
               <Link href={`/events/${event.id}`} key={event.id} className="group block">
                 <div className="bg-background rounded-3xl overflow-hidden border border-border hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
                   <div className="h-64 relative overflow-hidden">
                     <img 
-                      src={event.image} 
+                      src={event.image_url || '/images/hero-concert.jpg'} 
                       alt={event.title} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
                     <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-primary px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide">
-                      {event.category}
+                      {event.category || 'Event'}
                     </div>
                   </div>
                   <div className="p-6">
                     <p className="text-accent font-bold text-sm mb-2 flex items-center gap-2">
-                      <CalendarDays size={16} /> {event.date}
+                      <CalendarDays size={16} /> {formattedDate}
                     </p>
                     <h3 className="text-xl font-bold font-serif text-primary mb-3 group-hover:text-accent transition-colors">{event.title}</h3>
                     <p className="text-muted text-sm font-medium flex items-center gap-2 mb-6">
-                      <MapPin size={16} /> {event.venue}
+                      <MapPin size={16} /> {event.location}
                     </p>
                     <div className="flex items-center justify-between pt-4 border-t border-border">
                       <div>
                         <p className="text-xs text-muted font-bold uppercase">From</p>
-                        <p className="font-bold text-lg text-primary">{event.price}</p>
+                        <p className="font-bold text-lg text-primary">₵ {minPrice.toFixed(2)}</p>
                       </div>
                       <div className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
                         <ArrowRight size={18} />
@@ -175,7 +175,7 @@ export default function HomePage() {
                   </div>
                 </div>
               </Link>
-            ))}
+            )})}
           </div>
         </div>
       </section>

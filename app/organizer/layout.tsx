@@ -1,56 +1,54 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
-  LayoutDashboard, 
-  Ticket, 
-  CalendarDays, 
-  Scan,
-  Users,
-  Settings,
-  Menu,
-  Bell
+  Home, 
+  Calendar, 
+  Users, 
+  Settings, 
+  Bell, 
+  Menu, 
+  LogOut, 
+  Ticket 
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createBrowserClient } from "@supabase/ssr";
 
 export default function OrganizerLayout({ children }: { children: React.ReactNode }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isAuthorized, setIsAuthorized] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = createClient();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.push("/login");
         return;
       }
-      if (user.user_metadata?.role !== "organizer") {
-        router.push("/events/explore");
-        return;
-      }
-      setIsAuthorized(true);
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      setUserProfile(profile || { first_name: 'Org', email: user.email });
     };
-    checkAuth();
+    fetchUser();
   }, [supabase, router]);
 
-  if (!isAuthorized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
 
   const navItems = [
-    { name: "Dashboard", href: "/organizer/dashboard", icon: LayoutDashboard },
-    { name: "My Events", href: "/organizer/events", icon: CalendarDays },
-    { name: "Scan Tickets", href: "/organizer/scanner", icon: Scan },
+    { name: "Dashboard", href: "/organizer/dashboard", icon: Home },
+    { name: "Events", href: "/organizer/events", icon: Calendar },
     { name: "Orders", href: "/organizer/orders", icon: Ticket },
     { name: "Team", href: "/organizer/team", icon: Users },
     { name: "Settings", href: "/organizer/settings", icon: Settings },
@@ -104,15 +102,42 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
             >
               <Menu size={24} />
             </button>
-            <h2 className="font-serif font-bold text-lg hidden sm:block">Welcome, Tech In Ghana</h2>
+            <h2 className="font-serif font-bold text-lg hidden sm:block">Welcome, {userProfile?.first_name || 'Organizer'}</h2>
           </div>
 
           <div className="flex items-center gap-4">
             <button className="relative p-2 text-muted hover:text-primary transition-colors">
               <Bell size={20} />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-surface"></span>
             </button>
-            <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm">
-              T
+            <div className="relative">
+              <button 
+                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-bold text-sm hover:ring-2 hover:ring-primary/20 transition-all uppercase"
+              >
+                {userProfile?.first_name?.[0] || "O"}
+              </button>
+              
+              {isProfileMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-surface border border-border rounded-xl shadow-lg py-2 z-50">
+                  <div className="px-4 py-2 border-b border-border mb-2">
+                    <p className="text-sm font-bold truncate">{userProfile ? `${userProfile.first_name} ${userProfile.last_name || ''}` : 'Organizer'}</p>
+                    <p className="text-xs text-muted truncate">{userProfile?.email || 'Loading...'}</p>
+                  </div>
+                  <Link href="/organizer/settings" onClick={() => setIsProfileMenuOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-background transition-colors">
+                    <Settings size={16} /> Settings
+                  </Link>
+                  <button 
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      handleSignOut();
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
+                  >
+                    <LogOut size={16} /> Sign Out
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
