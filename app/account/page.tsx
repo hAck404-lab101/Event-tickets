@@ -4,7 +4,7 @@ export default async function AccountProfile() {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user?.id).single();
-
+  return (
     <div className="space-y-6">
       <h1 className="text-3xl font-serif font-bold text-primary">My Profile</h1>
       
