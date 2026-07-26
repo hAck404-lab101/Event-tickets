@@ -47,23 +47,12 @@ export async function POST(request: Request) {
         "Authorization": `Bearer ${DORONX_API_KEY}`
       },
       body: JSON.stringify({
-        customer: {
-          email: customerEmail,
-          phone: customerPhone,
-          name: customerName,
-        },
-        items: [
-          {
-            reference: ticketTypeId,
-            quantity: quantity,
-            // Price would typically be looked up securely from the DB here
-            price: 150.00,
-            description: "Event Ticket"
-          }
-        ],
-        metadata: {
-          source: "tixly_checkout"
-        }
+        payerName: customerName || "Guest User",
+        payerEmail: customerEmail,
+        payerPhone: customerPhone || "",
+        amount: 150.00 * quantity,
+        currency: "GHS",
+        description: `Tixly Event Ticket - ${quantity}x`,
       })
     });
 
@@ -76,10 +65,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const invoiceData = await doronxResponse.json();
+    const responseJson = await doronxResponse.json();
+    const invoiceData = responseJson.data;
 
     // After invoice creation, send an SMS with the payment link if a phone number exists
-    if (customerPhone && invoiceData.paymentUrl) {
+    if (customerPhone && invoiceData?.paymentUrl) {
       await sendSMS(
         customerPhone,
         `Hi ${customerName || 'there'}, complete your Tixly ticket purchase securely here: ${invoiceData.paymentUrl}`
@@ -88,8 +78,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      paymentUrl: invoiceData.paymentUrl,
-      invoiceId: invoiceData.id,
+      paymentUrl: invoiceData?.paymentUrl,
+      invoiceId: invoiceData?.invoice?.invoiceId,
     });
 
   } catch (error) {
