@@ -23,41 +23,10 @@ export default async function OrganizerOrdersPage() {
           </button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-background text-muted uppercase font-bold text-xs border-b border-border">
-              <tr>
-                <th className="px-6 py-4">Order Ref</th>
-                <th className="px-6 py-4">Customer</th>
-                <th className="px-6 py-4">Event</th>
-                <th className="px-6 py-4">Total</th>
-                <th className="px-6 py-4 text-right">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              <tr className="hover:bg-background/50 transition-colors">
-                <td className="px-6 py-4 font-bold text-primary">#ORD-9128</td>
-                <td className="px-6 py-4 font-medium">Ama Serwaa<br/><span className="text-xs text-muted font-normal">ama@example.com</span></td>
-                <td className="px-6 py-4 font-bold">Accra Tech Summit</td>
-                <td className="px-6 py-4 font-bold">₵ 120.00</td>
-                <td className="px-6 py-4 text-right text-muted font-medium">Oct 10, 2026</td>
-              </tr>
-              <tr className="hover:bg-background/50 transition-colors">
-                <td className="px-6 py-4 font-bold text-primary">#ORD-8432</td>
-                <td className="px-6 py-4 font-medium">Kwame Mensah<br/><span className="text-xs text-muted font-normal">kwame@example.com</span></td>
-                <td className="px-6 py-4 font-bold">Accra Tech Summit</td>
-                <td className="px-6 py-4 font-bold">₵ 240.00</td>
-                <td className="px-6 py-4 text-right text-muted font-medium">Oct 09, 2026</td>
-              </tr>
-              <tr className="hover:bg-background/50 transition-colors">
-                <td className="px-6 py-4 font-bold text-primary">#ORD-7193</td>
-                <td className="px-6 py-4 font-medium">Abena Osei<br/><span className="text-xs text-muted font-normal">abena@example.com</span></td>
-                <td className="px-6 py-4 font-bold">Detty December Concert</td>
-                <td className="px-6 py-4 font-bold">₵ 500.00</td>
-                <td className="px-6 py-4 text-right text-muted font-medium">Oct 09, 2026</td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="border border-border rounded-xl overflow-hidden text-center py-16">
+          <Ticket size={48} className="mx-auto text-muted mb-4 opacity-50" />
+          <h3 className="text-xl font-bold font-serif mb-2">No orders found</h3>
+          <p className="text-muted">Once attendees start buying tickets, their orders will appear here.</p>
         </div>
       </div>
     </div>

@@ -29,40 +29,6 @@ export default async function OrganizerTeamPage() {
               Admin
             </span>
           </div>
-          <div className="p-6 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center font-bold text-lg">
-                K
-              </div>
-              <div>
-                <h3 className="font-bold">Kofi Owusu</h3>
-                <p className="text-sm text-muted">kofi.owusu@example.com</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full uppercase">
-                Scanner
-              </span>
-              <button className="text-sm font-bold text-muted hover:text-error transition-colors">Remove</button>
-            </div>
-          </div>
-          <div className="p-6 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold text-lg">
-                A
-              </div>
-              <div>
-                <h3 className="font-bold">Akua Afriyie</h3>
-                <p className="text-sm text-muted">akua.a@example.com</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="bg-orange-100 text-orange-800 text-xs font-bold px-3 py-1 rounded-full uppercase">
-                Manager
-              </span>
-              <button className="text-sm font-bold text-muted hover:text-error transition-colors">Remove</button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
