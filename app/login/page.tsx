@@ -218,13 +218,16 @@ export default function LoginPage() {
               )}
             </button>
 
-            <div className="text-center mt-4">
+            <div className="text-center mt-4 flex flex-col gap-3">
+              <Link href="/forgot-password" className="text-sm font-bold text-primary hover:underline">
+                Forgot password?
+              </Link>
               <button 
                 type="button" 
                 onClick={() => { setAuthMode("otp_request"); setError(null); }}
                 className="text-sm font-bold text-muted hover:text-primary transition-colors"
               >
-                Forgot password? Log in with SMS code
+                Log in with SMS code
               </button>
             </div>
           </form>
