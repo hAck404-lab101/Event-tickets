@@ -36,10 +36,13 @@ export async function POST(req: Request) {
     const SENDER_ID = "TixlyEvents";
     const API_URL = "https://sms.gonlinesites.com/app/sms/api";
 
+    // Strip the "+" sign if present, as some local gateways fail silently with it
+    const cleanPhone = phone.startsWith("+") ? phone.substring(1) : phone;
+
     const params = new URLSearchParams({
       action: "send-sms",
       api_key: API_KEY as string,
-      to: phone,
+      to: cleanPhone,
       from: SENDER_ID,
       sms: `Your Tixly login code is ${otp}. Do not share this with anyone.`,
     });
