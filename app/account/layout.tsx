@@ -39,11 +39,11 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={\`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors \${
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
                       isActive 
                         ? "bg-primary text-white" 
                         : "text-muted hover:bg-background hover:text-primary"
-                    }\`}
+                    }`}
                   >
                     <item.icon size={18} />
                     {item.name}

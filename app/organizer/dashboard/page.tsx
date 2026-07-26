@@ -73,13 +73,13 @@ export default function OrganizerDashboard() {
             </div>
           </div>
           
-          <div className="border border-dashed border-border rounded-xl p-5 flex flex-col justify-center items-center text-center hover:bg-background transition-colors cursor-pointer" onClick={() => window.location.href='/organizer/events/create'}>
+          <Link href="/organizer/events/create" className="border border-dashed border-border rounded-xl p-5 flex flex-col justify-center items-center text-center hover:bg-background transition-colors cursor-pointer">
             <div className="w-12 h-12 bg-surface border border-border rounded-full flex items-center justify-center text-muted mb-3">
               <Plus size={24} />
             </div>
             <h4 className="font-bold text-primary">Draft a new event</h4>
             <p className="text-sm text-muted mt-1 max-w-[200px]">Set up your next big experience and start selling tickets.</p>
-          </div>
+          </Link>
         </div>
       </div>
     </div>

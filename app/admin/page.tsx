@@ -1,4 +1,4 @@
-import { CreditCard, Users, CalendarDays, Ticket, TrendingUp, AlertCircle } from "lucide-react";
+import { CreditCard, Users, CalendarDays, Ticket, TrendingUp, AlertCircle, Building2 } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminOverview() {
@@ -56,7 +56,7 @@ export default function AdminOverview() {
               <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
                 <div 
                   className="w-full bg-border rounded-t-md group-hover:bg-primary transition-colors relative"
-                  style={{ height: \`\${height}%\` }}
+                  style={{ height: `${height}%` }}
                 >
                   <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 bg-primary text-white text-xs py-1 px-2 rounded transition-opacity">
                     ₵{height * 1000}
@@ -136,11 +136,11 @@ export default function AdminOverview() {
                     {order.amount}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={\`px-2 py-1 rounded-md text-xs font-bold \${
+                    <span className={`px-2 py-1 rounded-md text-xs font-bold ${
                       order.status === 'paid' ? 'bg-green-100 text-green-800' :
                       order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-error-bg text-error'
-                    }\`}>
+                    }`}>
                       {order.status.toUpperCase()}
                     </span>
                   </td>

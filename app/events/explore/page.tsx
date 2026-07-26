@@ -92,10 +92,10 @@ export default function ExploreEvents() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Link href={\`/events/event-\${i}\`} key={i} className="bg-surface rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group block">
+                <Link href={`/events/event-${i}`} key={i} className="bg-surface rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group block">
                   <div className="h-48 bg-border relative overflow-hidden">
                     <img 
-                      src={\`https://images.unsplash.com/photo-\${1500000000000 + i * 10000}?auto=format&fit=crop&w=600&q=80\`} 
+                      src={`https://images.unsplash.com/photo-${1500000000000 + i * 10000}?auto=format&fit=crop&w=600&q=80`} 
                       alt="Event" 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />

@@ -38,7 +38,7 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
       )}
 
       {/* Sidebar */}
-      <div className={\`fixed inset-y-0 left-0 z-50 w-64 bg-accent text-white transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:h-screen \${isOpen ? 'translate-x-0' : '-translate-x-full'}\`}>
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-accent text-white transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:h-screen ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between h-16 px-6 border-b border-white/20">
           <Link href="/organizer/dashboard" className="font-bold text-lg">
             Tixly Organizer
@@ -52,11 +52,11 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
               <Link
                 key={item.name}
                 href={item.href}
-                className={\`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors \${
+                className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   isActive 
                     ? "bg-white text-accent" 
                     : "text-white/80 hover:bg-white/10 hover:text-white"
-                }\`}
+                }`}
               >
                 <item.icon size={18} />
                 {item.name}

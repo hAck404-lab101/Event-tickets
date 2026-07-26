@@ -22,7 +22,7 @@ export default function EventCreateWizard() {
 
       <div className="flex gap-2">
         {[1, 2, 3].map((s) => (
-          <div key={s} className={\`h-2 flex-1 rounded-full \${s <= step ? 'bg-accent' : 'bg-border'}\`} />
+          <div key={s} className={`h-2 flex-1 rounded-full ${s <= step ? 'bg-accent' : 'bg-border'}`} />
         ))}
       </div>
 
