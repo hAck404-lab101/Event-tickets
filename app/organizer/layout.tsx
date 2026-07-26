@@ -12,11 +12,40 @@ import {
   Menu,
   Bell
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function OrganizerLayout({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+      if (user.user_metadata?.role !== "organizer") {
+        router.push("/events/explore");
+        return;
+      }
+      setIsAuthorized(true);
+    };
+    checkAuth();
+  }, [supabase, router]);
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   const navItems = [
     { name: "Dashboard", href: "/organizer/dashboard", icon: LayoutDashboard },

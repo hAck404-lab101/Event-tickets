@@ -3,15 +3,33 @@ import { createServerClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   try {
-    const { phone } = await req.json();
+    const { phone, mode = "login" } = await req.json();
 
     if (!phone) {
       return NextResponse.json({ error: "Phone number is required" }, { status: 400 });
     }
 
+    // Basic regex to ensure the phone number only contains a plus sign and digits
+    const phoneRegex = /^\+?[0-9]+$/;
+    if (!phoneRegex.test(phone)) {
+      return NextResponse.json({ error: "Invalid phone number format. Please enter a valid number (e.g. +233240000000)." }, { status: 400 });
+    }
+
     const supabase = createServerClient();
 
-    // 1. Generate 6-digit OTP
+    // 1. Check if user exists before sending OTP
+    const { data: users } = await supabase.auth.admin.listUsers();
+    const userExists = users.users.find(u => u.phone === phone);
+
+    if (mode === "register" && userExists) {
+      return NextResponse.json({ error: "Phone number is already registered. Please log in." }, { status: 400 });
+    }
+
+    if (mode === "login" && !userExists) {
+      return NextResponse.json({ error: "Account not found. Please create an account first." }, { status: 400 });
+    }
+
+    // 2. Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     
     // 2. Calculate expiration (10 minutes from now)
@@ -51,23 +69,12 @@ export async function POST(req: Request) {
       method: "GET",
     });
 
-    if (!smsRes.ok) {
-      return NextResponse.json({ error: "Failed to send SMS" }, { status: 500 });
-    }
+    const smsText = await smsRes.text();
+    console.log("SMS API Response Status:", smsRes.status);
+    console.log("SMS API Response Body:", smsText);
 
-    // 5. We also need to ensure the user exists in Supabase Auth so they can log in later!
-    // Supabase allows creating a user if they don't exist.
-    // We can list users, if not found, create one.
-    const { data: users } = await supabase.auth.admin.listUsers();
-    const userExists = users.users.find(u => u.phone === phone);
-    
-    if (!userExists) {
-       // Create dummy user. Password will be reset on verification.
-       await supabase.auth.admin.createUser({
-          phone: phone,
-          password: crypto.randomUUID(), // Temp password
-          phone_confirm: true // Force confirm
-       });
+    if (!smsRes.ok) {
+      return NextResponse.json({ error: `Failed to send SMS: ${smsRes.status} ${smsText}` }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
