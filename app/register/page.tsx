@@ -71,7 +71,10 @@ export default function RegisterPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to send SMS code.");
+      if (!res.ok) {
+        const msg = data?.error || (typeof data === "string" ? data : "Failed to send SMS code.");
+        throw new Error(msg);
+      }
       
       setStep("otp");
       toast.success(`Verification code sent to ${phone}`);
@@ -113,8 +116,10 @@ export default function RegisterPage() {
       });
 
       const data = await res.json();
+      
       if (!res.ok) {
-        throw new Error(data.error || "Registration failed. Please check your details and try again.");
+        const apiError = data?.error || (typeof data === "string" ? data : "Registration failed. Please check your details and try again.");
+        throw new Error(apiError);
       }
 
       // 2. Log in securely with email or phone
@@ -131,7 +136,10 @@ export default function RegisterPage() {
       }
 
       if (loginRes.error) {
-        throw new Error(loginRes.error.message || "Account created, but auto login failed. Please go to the login page.");
+        // If signInWithPassword fails, redirect to login page gracefully
+        toast.success("Account created successfully! Please log in.");
+        router.push(`/login?email=${encodeURIComponent(email)}`);
+        return;
       }
 
       toast.success("Account created successfully!");
@@ -142,8 +150,13 @@ export default function RegisterPage() {
       }
       router.refresh();
     } catch (err: any) {
-      console.error("Verification error:", err);
-      const msg = typeof err === "string" ? err : err?.message || "Verification failed. Please check your code and try again.";
+      console.error("Verification error caught:", err);
+      let msg = "Invalid verification code. Please check your SMS code and try again.";
+      if (typeof err === "string" && err.trim().length > 0) {
+        msg = err;
+      } else if (err?.message && typeof err.message === "string" && err.message.trim().length > 0) {
+        msg = err.message;
+      }
       setErrorMessage(msg);
       toast.error(msg);
     } finally {

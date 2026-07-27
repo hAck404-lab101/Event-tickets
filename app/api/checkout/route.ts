@@ -1,47 +1,58 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { createServerClient, getAdminClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { eventId, eventTitle, ticketTypeId, ticketName, quantity, unitPrice, customerEmail, customerPhone, customerName } = body;
+    const {
+      eventId,
+      eventTitle,
+      ticketTypeId,
+      ticketName,
+      quantity,
+      unitPrice,
+      paymentMethod = "momo",
+      customerEmail,
+      customerPhone,
+      customerName,
+    } = body;
 
     // Validate request
     if (!eventId || !ticketTypeId || !quantity || !customerEmail || !customerPhone || !customerName) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing required fields for checkout (Name, Email, Phone, Ticket details)." },
         { status: 400 }
       );
     }
 
     const supabase = await createServerClient();
+    const supabaseAdmin = getAdminClient();
 
     // Check if customer is authenticated
     const authHeader = request.headers.get("Authorization");
     const token = authHeader?.replace("Bearer ", "");
-    let { data: { user } } = await supabase.auth.getUser(token);
+    let user = null;
+
+    if (token) {
+      const { data: authData } = await supabase.auth.getUser(token);
+      user = authData?.user || null;
+    }
 
     if (!user) {
       const { data: currentAuth } = await supabase.auth.getUser();
-      user = currentAuth.user;
+      user = currentAuth?.user || null;
     }
 
     let customerId = user?.id || null;
     const formattedEmail = customerEmail.trim().toLowerCase();
     const formattedPhone = customerPhone.replace(/\s+/g, "").trim();
 
-    // If customerId not set via auth, try matching profiles by email or phone
+    // Link profile by email or phone if customerId isn't set
     if (!customerId) {
       const { data: profile } = await supabaseAdmin
         .from("profiles")
         .select("id")
-        .or(`email.eq.${formattedEmail},phone.eq.${formattedPhone}`)
+        .or(`email.ilike.${formattedEmail},phone.eq.${formattedPhone}`)
         .maybeSingle();
 
       if (profile) {
@@ -50,12 +61,12 @@ export async function POST(request: Request) {
     }
 
     // Calculate totals
-    const subtotal = unitPrice * quantity;
+    const subtotal = Number(unitPrice) * Number(quantity);
     const serviceFee = Math.round(subtotal * 0.03 * 100) / 100;
     const total = subtotal + serviceFee;
     const reference = `TX-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-    // Insert Order with initial pending status
+    // 1. Insert Order with initial 'pending' status
     const { data: order, error: orderError } = await supabaseAdmin
       .from("orders")
       .insert({
@@ -76,25 +87,23 @@ export async function POST(request: Request) {
 
     if (orderError || !order) {
       console.error("Order Insert Error:", orderError);
-      return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to create pending order" }, { status: 500 });
     }
 
-    // Insert Order Item
-    const { error: itemError } = await supabaseAdmin
-      .from("order_items")
-      .insert({
-        order_id: order.id,
-        ticket_type_id: ticketTypeId,
-        quantity,
-        unit_price: unitPrice,
-      });
+    // 2. Insert Order Items
+    const { error: itemError } = await supabaseAdmin.from("order_items").insert({
+      order_id: order.id,
+      ticket_type_id: ticketTypeId,
+      quantity,
+      unit_price: unitPrice,
+    });
 
     if (itemError) {
       console.error("Order Item Insert Error:", itemError);
     }
 
-    // Attempt DoronX API Integration
-    const doronxApiUrl = process.env.DORONX_API_URL || "https://api.doronx.com";
+    // 3. Initiate DoronX Smart Invoicing API Call
+    const doronxApiUrl = process.env.DORONX_API_URL || "https://webapi.doronpay.com";
     const doronxApiKey = process.env.DORONX_API_KEY;
 
     let checkoutUrl: string | null = null;
@@ -105,112 +114,77 @@ export async function POST(request: Request) {
     const webhookUrl = `${origin}/api/webhooks/doronx`;
 
     if (doronxApiKey) {
-      try {
-        const endpoint = doronxApiUrl.endsWith("/invoices")
-          ? doronxApiUrl
-          : `${doronxApiUrl.replace(/\/$/, "")}/v1/invoices`;
+      const endpointsToTry = [
+        `${doronxApiUrl.replace(/\/$/, "")}/smart-invoicing`,
+        `${doronxApiUrl.replace(/\/$/, "")}/v1/invoices`,
+        `https://webapi.doronpay.com/smart-invoicing`,
+      ];
 
-        const invoiceRes = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${doronxApiKey}`,
-          },
-          body: JSON.stringify({
-            customer: {
-              name: customerName,
-              email: formattedEmail,
-              phone: formattedPhone,
+      for (const endpoint of endpointsToTry) {
+        if (checkoutUrl) break;
+        try {
+          const invoiceRes = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${doronxApiKey}`,
+              "x-api-key": doronxApiKey,
             },
-            items: [
-              {
-                name: `${ticketName} - ${eventTitle || "Event Ticket"}`,
-                quantity,
-                unit_price: unitPrice,
+            body: JSON.stringify({
+              customer: {
+                name: customerName.trim(),
+                email: formattedEmail,
+                phone: formattedPhone,
               },
-            ],
-            amount: total,
-            currency: "GHS",
-            reference,
-            callback_url: callbackUrl,
-            webhook_url: webhookUrl,
-          }),
-        });
+              items: [
+                {
+                  name: `${ticketName} - ${eventTitle || "Event Ticket"}`,
+                  quantity,
+                  unit_price: unitPrice,
+                },
+              ],
+              amount: total,
+              currency: "GHS",
+              reference,
+              payment_method: paymentMethod, // 'momo' or 'crypto'
+              callback_url: callbackUrl,
+              webhook_url: webhookUrl,
+            }),
+          });
 
-        if (invoiceRes.ok) {
-          const invoiceData = await invoiceRes.json();
-          checkoutUrl = invoiceData.invoice_url || invoiceData.checkout_url || invoiceData.payment_url || invoiceData.url;
-          invoiceId = invoiceData.invoice_id || invoiceData.id || null;
+          if (invoiceRes.ok) {
+            const invoiceData = await invoiceRes.json();
+            checkoutUrl =
+              invoiceData.invoice_url ||
+              invoiceData.checkout_url ||
+              invoiceData.payment_url ||
+              invoiceData.url ||
+              invoiceData.data?.url;
+            invoiceId = invoiceData.invoice_id || invoiceData.id || invoiceData.data?.id || null;
 
-          if (invoiceId) {
-            await supabaseAdmin.from("orders").update({ invoice_id: invoiceId }).eq("id", order.id);
+            if (invoiceId) {
+              await supabaseAdmin.from("orders").update({ invoice_id: invoiceId }).eq("id", order.id);
+            }
           }
-        } else {
-          console.warn("DoronX API returned non-200:", await invoiceRes.text());
+        } catch (doronxErr) {
+          console.warn(`DoronX fetch to ${endpoint} failed:`, doronxErr);
         }
-      } catch (doronxErr) {
-        console.warn("DoronX API fetch error:", doronxErr);
       }
     }
 
-    // Fallback: If DoronX API is in test/sandbox mode or didn't return URL directly,
-    // generate tickets now and direct customer to completion page so purchase always works cleanly
-    if (!checkoutUrl) {
-      // Auto-issue tickets for instant sandbox mode
-      const tickets = [];
-      for (let i = 0; i < quantity; i++) {
-        const ticketCode = `TCK-${reference}-${i + 1}`;
-        const qrPayload = `${origin}/verify/${ticketCode}`;
-
-        tickets.push({
-          order_id: order.id,
-          ticket_type_id: ticketTypeId,
-          ticket_code: ticketCode,
-          qr_payload: qrPayload,
-          attendee_name: customerName,
-          status: "valid",
-        });
-      }
-
-      const { data: createdTickets } = await supabaseAdmin
-        .from("tickets")
-        .insert(tickets)
-        .select("id");
-
-      // Update quantity_sold on ticket_types
-      const { data: tType } = await supabaseAdmin
-        .from("ticket_types")
-        .select("quantity_sold")
-        .eq("id", ticketTypeId)
-        .single();
-
-      if (tType) {
-        await supabaseAdmin
-          .from("ticket_types")
-          .update({ quantity_sold: (tType.quantity_sold || 0) + quantity })
-          .eq("id", ticketTypeId);
-      }
-
-      // Mark order paid
-      await supabaseAdmin.from("orders").update({ payment_status: "paid" }).eq("id", order.id);
-
-      const firstTicketId = createdTickets?.[0]?.id;
-      checkoutUrl = firstTicketId
-        ? `/events/${eventId}/tickets/${firstTicketId}`
-        : `/payment/success?reference=${reference}`;
-    }
+    // 4. Return checkout URL if available, otherwise redirect to pending page with order reference
+    // Order strictly remains in 'pending' status until verified by DoronX webhook
+    const finalUrl = checkoutUrl || callbackUrl;
 
     return NextResponse.json({
       success: true,
-      paymentUrl: checkoutUrl,
+      paymentUrl: finalUrl,
       reference,
       orderId: order.id,
+      pending: !checkoutUrl,
     });
   } catch (error: any) {
     console.error("Checkout Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
