@@ -1,4 +1,4 @@
-import { createServerClient } from "./supabase/server";
+import { getAdminClient } from "./supabase/server";
 
 export type TicketType = {
   id: string;
@@ -25,7 +25,7 @@ export type Event = {
 };
 
 export async function getEvents(): Promise<Event[]> {
-  const supabase = createServerClient();
+  const supabase = getAdminClient();
   const { data, error } = await supabase
     .from("events")
     .select(`
@@ -46,7 +46,7 @@ export async function getEvents(): Promise<Event[]> {
 }
 
 export async function getEventById(id: string): Promise<Event | null> {
-  const supabase = createServerClient();
+  const supabase = getAdminClient();
   const { data: e, error } = await supabase
     .from("events")
     .select(`
