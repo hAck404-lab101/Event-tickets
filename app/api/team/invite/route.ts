@@ -10,7 +10,7 @@ const supabaseAdmin = createClient(
 // POST /api/team/invite — invite a team member
 export async function POST(req: Request) {
   try {
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
 // GET /api/team/invite — list invitations for the organizer
 export async function GET(req: Request) {
   try {
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

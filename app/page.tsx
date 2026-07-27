@@ -9,7 +9,7 @@ const categories = ["All", "Music", "Business", "Sports", "Lifestyle", "Campus"]
 export default async function HomePage() {
   const events = await getEvents();
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   const role = user?.user_metadata?.role;
   const dashboardLink = role === 'organizer' ? '/organizer/dashboard' : '/account';

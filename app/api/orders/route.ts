@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/server";
 
 function orderReference() {
   return `TIX-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const subtotal = safeUnitPrice * safeQuantity;
     const serviceFee = Math.round(subtotal * 0.03 * 100) / 100;
     const total = subtotal + serviceFee;
-    const supabase = createServerClient();
+    const supabase = getAdminClient();
 
     const { data: order, error: orderError } = await supabase
       .from("orders")

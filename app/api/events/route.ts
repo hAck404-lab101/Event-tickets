@@ -10,7 +10,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   try {
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Authenticate user via token from client
     const authHeader = req.headers.get("Authorization");
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const supabase = createServerClient();
+    const supabase = getAdminClient();
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status") || "published";
 

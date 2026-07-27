@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Check if customer is authenticated
     const authHeader = request.headers.get("Authorization");
