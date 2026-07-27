@@ -7,22 +7,52 @@ export default async function OrganizerDashboard() {
   const { data: { user } } = await supabase.auth.getUser();
   
   // Fetch real events
-  const { data: events } = await supabase
+  const { data: eventsData } = await supabase
     .from('events')
-    .select('*')
+    .select(`
+      *,
+      ticket_types (
+        id,
+        quantity_total,
+        quantity_sold,
+        price
+      )
+    `)
     .eq('organizer_id', user?.id)
     .order('created_at', { ascending: false });
 
+  const events = eventsData || [];
+
   // Calculate KPIs
-  // (In a real app, you would query the orders table joined with ticket_types to sum revenue and tickets sold)
-  // For now, since the orders table is empty, we default to 0.
-  const totalRevenue = 0;
-  const ticketsSold = 0;
+  let totalRevenue = 0;
+  let ticketsSold = 0;
+
+  const processedEvents = events.map((event: any) => {
+    let eventRevenue = 0;
+    let eventTicketsSold = 0;
+    let eventTicketsTotal = 0;
+
+    event.ticket_types?.forEach((tt: any) => {
+      eventTicketsSold += tt.quantity_sold || 0;
+      eventTicketsTotal += tt.quantity_total || 0;
+      eventRevenue += (tt.quantity_sold || 0) * (tt.price || 0);
+    });
+
+    totalRevenue += eventRevenue;
+    ticketsSold += eventTicketsSold;
+
+    return {
+      ...event,
+      eventRevenue,
+      eventTicketsSold,
+      eventTicketsTotal
+    };
+  });
 
   const kpis = [
     { title: "Net Revenue", value: `₵ ${totalRevenue.toFixed(2)}`, icon: CreditCard, trend: "" },
     { title: "Tickets Sold", value: ticketsSold.toString(), icon: Ticket, trend: "" },
-    { title: "Active Events", value: (events?.length || 0).toString(), icon: CalendarDays, trend: "" },
+    { title: "Active Events", value: events.length.toString(), icon: CalendarDays, trend: "" },
   ];
 
   return (
@@ -67,7 +97,7 @@ export default async function OrganizerDashboard() {
           <Link href="/organizer/events" className="text-sm font-bold hover:underline">View All</Link>
         </div>
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {events?.map((event: any) => (
+          {processedEvents.map((event: any) => (
             <div key={event.id} className="border border-border rounded-xl p-5 flex flex-col justify-between hover:border-primary transition-colors">
               <div>
                 <div className="flex justify-between items-start">
@@ -78,17 +108,17 @@ export default async function OrganizerDashboard() {
                 </div>
                 <h4 className="text-xl font-bold mt-4">{event.title}</h4>
                 <p className="text-muted text-sm mt-1 flex items-center gap-2">
-                  <CalendarDays size={14} /> {new Date(event.date).toLocaleDateString()}
+                  <CalendarDays size={14} /> {new Date(event.starts_at || event.created_at).toLocaleDateString()}
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-border flex justify-between">
                 <div>
                   <p className="text-xs text-muted font-medium">Sold</p>
-                  <p className="font-bold">0 / --</p>
+                  <p className="font-bold text-primary">{event.eventTicketsSold} / {event.eventTicketsTotal}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted font-medium">Revenue</p>
-                  <p className="font-bold">₵ 0</p>
+                  <p className="font-bold text-primary">₵ {event.eventRevenue.toFixed(2)}</p>
                 </div>
               </div>
             </div>

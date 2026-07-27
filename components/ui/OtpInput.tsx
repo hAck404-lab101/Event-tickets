@@ -42,6 +42,20 @@ export function OtpInput({
     }
   }, [error]);
 
+  // Restore focus after loading state changes from true to false
+  const [wasLoading, setWasLoading] = useState(false);
+  useEffect(() => {
+    if (loading) {
+      setWasLoading(true);
+    } else if (wasLoading) {
+      setWasLoading(false);
+      // Small timeout to ensure DOM is ready and not disabled
+      setTimeout(() => {
+         inputRefs.current[activeInput]?.focus();
+      }, 50);
+    }
+  }, [loading, activeInput, wasLoading]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const value = e.target.value;
     if (isNaN(Number(value))) return;

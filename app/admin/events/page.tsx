@@ -1,7 +1,25 @@
 import { CalendarDays, Filter, MoreHorizontal, Plus, Search } from "lucide-react";
 import Link from "next/link";
+import { createServerClient } from "@/lib/supabase/server";
 
-export default function AdminEventsPage() {
+export default async function AdminEventsPage() {
+  const supabase = createServerClient();
+  
+  const { data: eventsData } = await supabase
+    .from('events')
+    .select(`
+      id,
+      title,
+      city,
+      starts_at,
+      status,
+      organizer:organizers(business_name),
+      ticket_types(quantity_total, quantity_sold)
+    `)
+    .order('created_at', { ascending: false });
+
+  const events = eventsData || [];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -16,7 +34,7 @@ export default function AdminEventsPage() {
 
       <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col">
         <div className="p-4 border-b border-border flex flex-col md:flex-row gap-4 justify-between bg-background">
-          <div className="flex items-center bg-white rounded-lg px-4 py-2 border border-border focus-within:border-primary flex-1 max-w-md">
+          <div className="flex items-center bg-surface-elevated rounded-lg px-4 py-2 border border-border focus-within:border-primary flex-1 max-w-md">
             <Search size={16} className="text-muted mr-2 shrink-0" />
             <input 
               type="text" 
@@ -25,7 +43,7 @@ export default function AdminEventsPage() {
             />
           </div>
           <div className="flex gap-2">
-            <button className="bg-white border border-border px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-background">
+            <button className="bg-surface-elevated border border-border px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-background">
               <Filter size={16} /> Filter
             </button>
           </div>
@@ -44,26 +62,27 @@ export default function AdminEventsPage() {
               </tr>
             </thead>
             <tbody className="text-sm">
-              {[
-                { name: "Accra Tech Summit", org: "Tech In Ghana", date: "Oct 12, 2026", time: "09:00 AM", tickets: "450 / 500", status: "published" },
-                { name: "Live Comedy Night", org: "Laugh Out Loud", date: "Oct 15, 2026", time: "07:00 PM", tickets: "120 / 300", status: "pending_approval" },
-                { name: "Food Festival", org: "Taste Makers", date: "Nov 01, 2026", time: "11:00 AM", tickets: "0 / 1000", status: "draft" },
-                { name: "Afrochella 2026", org: "Culture Fest", date: "Dec 28, 2026", time: "12:00 PM", tickets: "5,000 / 10,000", status: "published" },
-              ].map((event, i) => (
-                <tr key={i} className="border-b border-border hover:bg-background/50 transition-colors">
+              {events.map((event: any) => {
+                let sold = 0;
+                let total = 0;
+                event.ticket_types?.forEach((tt: any) => {
+                  sold += tt.quantity_sold;
+                  total += tt.quantity_total;
+                });
+                return (
+                <tr key={event.id} className="border-b border-border hover:bg-background/50 transition-colors">
                   <td className="px-6 py-4">
-                    <div className="font-bold text-primary">{event.name}</div>
-                    <div className="text-xs text-muted mt-1">Accra, Ghana</div>
+                    <div className="font-bold text-primary">{event.title}</div>
+                    <div className="text-xs text-muted mt-1">{event.city}</div>
                   </td>
-                  <td className="px-6 py-4 text-muted">{event.org}</td>
+                  <td className="px-6 py-4 text-muted">{event.organizer?.business_name}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <CalendarDays size={14} className="text-muted" />
-                      {event.date}
+                      {new Date(event.starts_at).toLocaleDateString()}
                     </div>
-                    <div className="text-xs text-muted mt-1">{event.time}</div>
                   </td>
-                  <td className="px-6 py-4 font-medium">{event.tickets}</td>
+                  <td className="px-6 py-4 font-medium">{sold} / {total}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-md text-xs font-bold ${
                       event.status === 'published' ? 'bg-green-100 text-green-800' :
@@ -79,18 +98,14 @@ export default function AdminEventsPage() {
                     </button>
                   </td>
                 </tr>
-              ))}
+              )})}
+              {events.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-muted">No events found.</td>
+                </tr>
+              )}
             </tbody>
           </table>
-        </div>
-        
-        <div className="p-4 border-t border-border flex justify-between items-center text-sm text-muted bg-background">
-          <span>Showing 1 to 4 of 4 entries</span>
-          <div className="flex gap-1">
-            <button className="px-3 py-1 border border-border rounded hover:bg-white disabled:opacity-50" disabled>Prev</button>
-            <button className="px-3 py-1 border border-border rounded bg-primary text-white">1</button>
-            <button className="px-3 py-1 border border-border rounded hover:bg-white disabled:opacity-50" disabled>Next</button>
-          </div>
         </div>
       </div>
     </div>

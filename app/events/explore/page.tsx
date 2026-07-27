@@ -1,7 +1,9 @@
 import { Search, Filter, MapPin, Calendar, Tag } from "lucide-react";
+import { getEvents, formatGhs } from "@/lib/events";
 import Link from "next/link";
 
-export default function ExploreEvents() {
+export default async function ExploreEventsPage() {
+  const events = await getEvents();
   return (
     <div className="bg-background min-h-screen pb-20">
       {/* Navbar placeholder - assuming root layout handles this, but for isolation we'll skip complex nav here */}
@@ -81,7 +83,7 @@ export default function ExploreEvents() {
           {/* Event Grid */}
           <div className="flex-1">
             <div className="flex justify-between items-center mb-6">
-              <span className="text-sm text-muted">Showing <strong className="text-primary">124</strong> events</span>
+              <span className="text-sm text-muted">Showing <strong className="text-primary">{events.length}</strong> events</span>
               <select className="bg-transparent border-none text-sm font-bold outline-none cursor-pointer">
                 <option>Popularity</option>
                 <option>Date (Soonest)</option>
@@ -91,41 +93,45 @@ export default function ExploreEvents() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Link href={`/events/event-${i}`} key={i} className="bg-surface rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group block">
+              {events.map((event: any) => {
+                const prices = event.ticketTypes?.map((t: any) => t.price) || [];
+                const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+                
+                return (
+                <Link href={`/events/${event.id}`} key={event.id} className="bg-surface rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group block">
                   <div className="h-48 bg-border relative overflow-hidden">
                     <img 
-                      src={`https://images.unsplash.com/photo-${1500000000000 + i * 10000}?auto=format&fit=crop&w=600&q=80`} 
-                      alt="Event" 
+                      src={event.image || `https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80`} 
+                      alt={event.title} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur text-primary text-xs font-bold px-2 py-1 rounded-md">
-                      TECHNOLOGY
+                    <div className="absolute top-3 left-3 bg-surface-glass backdrop-blur text-primary text-xs font-bold px-2 py-1 rounded-md uppercase">
+                      {event.category}
                     </div>
                   </div>
                   <div className="p-5">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-serif font-bold text-xl leading-tight mb-2 group-hover:text-accent transition-colors">
-                        Accra Tech Summit 2026
+                        {event.title}
                       </h3>
                     </div>
                     <p className="text-accent text-sm font-bold mb-1 flex items-center gap-1.5">
-                      <Calendar size={14} /> Oct 12, 2026
+                      <Calendar size={14} /> {event.date}
                     </p>
                     <p className="text-muted text-sm flex items-center gap-1.5 mb-4">
-                      <MapPin size={14} /> AICC, Accra
+                      <MapPin size={14} /> {event.venue}, {event.city}
                     </p>
                     <div className="pt-4 border-t border-border flex justify-between items-center">
                       <span className="text-xs font-bold text-muted uppercase tracking-wider">Starting from</span>
-                      <span className="font-bold text-primary">₵150.00</span>
+                      <span className="font-bold text-primary">{formatGhs(minPrice)}</span>
                     </div>
                   </div>
                 </Link>
-              ))}
+              )})}
             </div>
             
             <div className="mt-12 text-center">
-              <button className="bg-white border border-border px-6 py-3 rounded-xl font-bold text-sm hover:bg-background transition-colors">
+              <button className="bg-surface-elevated border border-border px-6 py-3 rounded-xl font-bold text-sm hover:bg-background transition-colors">
                 Load More Events
               </button>
             </div>

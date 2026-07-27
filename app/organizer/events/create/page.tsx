@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ArrowLeft, ArrowRight, Save, Image as ImageIcon, Plus, Trash2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,6 +12,42 @@ export default function EventCreateWizard() {
   const router = useRouter();
 
   // Step 1 State
+  const [categoriesList, setCategoriesList] = useState<any[]>([]);
+  const [checkingProfile, setCheckingProfile] = useState(true);
+  const [organizerId, setOrganizerId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const init = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      // Check organizer profile
+      const { data: orgData } = await supabase
+        .from("organizers")
+        .select("id")
+        .eq("owner_id", user.id)
+        .single();
+
+      if (!orgData) {
+        alert("Please complete your organizer profile first.");
+        router.push("/organizer/settings");
+        return;
+      }
+      setOrganizerId(orgData.id);
+
+      // Fetch categories
+      const { data: cats } = await supabase.from("categories").select("id, name");
+      if (cats) setCategoriesList(cats);
+
+      setCheckingProfile(false);
+    };
+    init();
+  }, [router]);
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -100,9 +136,10 @@ export default function EventCreateWizard() {
       const token = session?.access_token;
 
       const payload = {
+        organizer_id: organizerId,
         title,
         description,
-        category,
+        category, // ID or string
         image_url: imageBase64,
         date: startsAt,
         end_date: endsAt,
@@ -134,6 +171,14 @@ export default function EventCreateWizard() {
       setLoading(false);
     }
   };
+
+  if (checkingProfile) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="animate-spin text-primary w-8 h-8" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -194,13 +239,9 @@ export default function EventCreateWizard() {
                   className="w-full border border-border rounded-lg p-3 outline-none focus:border-primary bg-background text-primary"
                 >
                   <option value="">Select a category...</option>
-                  <option value="Technology">Technology</option>
-                  <option value="Music">Music</option>
-                  <option value="Business">Business</option>
-                  <option value="Sports">Sports</option>
-                  <option value="Lifestyle">Lifestyle</option>
-                  <option value="Campus">Campus</option>
-                  <option value="Food & Drink">Food & Drink</option>
+                  {categoriesList.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
                 </select>
               </div>
 
@@ -217,7 +258,7 @@ export default function EventCreateWizard() {
                 {imageBase64 ? (
                   <div className="relative rounded-xl overflow-hidden border border-border group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                     <img src={imageBase64} alt="Banner Preview" className="w-full h-64 object-cover" />
-                    <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white">
+                    <div className="absolute inset-0 bg-overlay flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-foreground">
                       <ImageIcon size={32} className="mb-2" />
                       <p className="font-bold">Change Image</p>
                     </div>

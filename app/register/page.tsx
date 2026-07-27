@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ArrowRight, Loader2, KeyRound, Smartphone, User, Lock, Ticket } from "lucide-react";
 import Link from "next/link";
 import { OtpInput } from "@/components/ui/OtpInput";
+import { formatPhoneNumber } from "@/lib/utils";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -31,12 +32,7 @@ export default function RegisterPage() {
         return;
       }
       
-      let formattedPhone = phone.trim();
-      if (formattedPhone.startsWith("0") && formattedPhone.length === 10) {
-        formattedPhone = `+233${formattedPhone.substring(1)}`;
-      } else if (!formattedPhone.startsWith("+")) {
-        formattedPhone = `+${formattedPhone}`;
-      }
+      const formattedPhone = formatPhoneNumber(phone);
 
       setCheckingPhone(true);
       try {
@@ -72,12 +68,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
     
-    let formattedPhone = phone.trim();
-    if (formattedPhone.startsWith("0") && formattedPhone.length === 10) {
-      formattedPhone = `+233${formattedPhone.substring(1)}`;
-    } else if (!formattedPhone.startsWith("+")) {
-      formattedPhone = `+${formattedPhone}`;
-    }
+    const formattedPhone = formatPhoneNumber(phone);
     
     try {
       const res = await fetch("/api/auth/send-otp", {
@@ -106,12 +97,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
     
-    let formattedPhone = phone.trim();
-    if (formattedPhone.startsWith("0") && formattedPhone.length === 10) {
-      formattedPhone = `+233${formattedPhone.substring(1)}`;
-    } else if (!formattedPhone.startsWith("+")) {
-      formattedPhone = `+${formattedPhone}`;
-    }
+    const formattedPhone = formatPhoneNumber(phone);
 
     try {
       // 1. Verify OTP and Register user securely via API

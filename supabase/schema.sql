@@ -185,3 +185,23 @@ create policy "Users can read own orders" on public.orders for select using (cus
 create policy "Users can read own tickets" on public.tickets for select using (
   exists (select 1 from public.orders where orders.id = tickets.order_id and orders.customer_id = auth.uid())
 );
+
+-- Trigger to automatically create profile for new auth.users
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, phone, full_name)
+  values (
+    new.id,
+    new.phone,
+    new.raw_user_meta_data->>'name'
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+-- Drop trigger if exists
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();

@@ -41,7 +41,7 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (va
       <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface border-r border-border transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:h-screen ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between h-16 px-6 border-b border-border">
           <Link href="/admin" className="flex items-center gap-2 font-bold text-lg text-primary">
-            <div className="w-8 h-8 rounded-md bg-primary text-white flex items-center justify-center">T</div>
+            <div className="w-8 h-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center">T</div>
             Tixly Admin
           </Link>
           <button className="lg:hidden text-muted hover:text-primary" onClick={() => setIsOpen(false)}>
@@ -58,7 +58,7 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (va
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   isActive 
-                    ? "bg-primary text-white" 
+                    ? "bg-primary text-primary-foreground" 
                     : "text-muted hover:bg-background hover:text-primary"
                 }`}
               >

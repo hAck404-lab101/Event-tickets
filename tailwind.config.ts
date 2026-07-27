@@ -9,21 +9,38 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#0a0a0a",
-        foreground: "#f5f5f5",
+        background: "var(--color-background)",
+        foreground: "var(--color-foreground)",
         primary: {
-          DEFAULT: "#d4af37",
-          foreground: "#0a0a0a",
+          DEFAULT: "var(--color-primary)",
+          hover: "var(--color-primary-hover)",
+          active: "var(--color-primary-active)",
+          muted: "var(--color-primary-muted)",
+          foreground: "var(--color-primary-foreground)",
         },
-        accent: {
-          DEFAULT: "#f3e5ab",
-          foreground: "#0a0a0a",
+        surface: {
+          DEFAULT: "var(--color-surface)",
+          elevated: "var(--color-surface-elevated)",
+          secondary: "var(--color-surface-secondary)",
+          glass: "var(--color-surface-glass)",
         },
-        surface: "#141414",
-        border: "#2a2a2a",
-        muted: "#888888",
-        error: "#ef4444",
-        "error-bg": "#3f1616",
+        border: {
+          DEFAULT: "var(--color-border)",
+          focus: "var(--color-border-focus)",
+        },
+        muted: "var(--color-muted)",
+        error: {
+          DEFAULT: "var(--color-error)",
+          bg: "var(--color-error-bg)",
+        },
+        success: "var(--color-success)",
+        warning: "var(--color-warning)",
+        disabled: {
+          DEFAULT: "var(--color-disabled)",
+          text: "var(--color-disabled-text)",
+        },
+        overlay: "var(--color-overlay)",
+        skeleton: "var(--color-skeleton)",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "Arial", "Helvetica", "sans-serif"],

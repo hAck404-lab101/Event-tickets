@@ -1,23 +1,15 @@
 import { Search, CalendarDays, MapPin, ArrowRight, Ticket, User, Menu } from "lucide-react";
 import Link from "next/link";
 
+import { getEvents, formatGhs } from "@/lib/events";
 import { createServerClient } from "@/lib/supabase/server";
 
 const categories = ["All", "Music", "Business", "Sports", "Lifestyle", "Campus"];
 
 export default async function HomePage() {
-  const supabase = createServerClient();
-  const { data: events } = await supabase
-    .from('events')
-    .select(`
-      *,
-      ticket_types (
-        price
-      )
-    `)
-    .eq('status', 'published')
-    .order('date', { ascending: true });
+  const events = await getEvents();
 
+  const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   const role = user?.user_metadata?.role;
   const dashboardLink = role === 'organizer' ? '/organizer/dashboard' : '/account';
@@ -100,7 +92,7 @@ export default async function HomePage() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
             
             <div className="absolute bottom-0 left-0 right-0 p-8">
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl text-white">
+              <div className="bg-surface-glass backdrop-blur-md border border-border p-6 rounded-2xl text-foreground">
                 <span className="bg-accent text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide mb-4 inline-block">Featured</span>
                 <h3 className="text-2xl font-bold font-serif mb-1">Accra Night Live</h3>
                 <p className="text-white/80 font-medium flex items-center gap-2"><MapPin size={16}/> Untamed Empire, Accra</p>
@@ -151,7 +143,7 @@ export default async function HomePage() {
                       alt={event.title} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
-                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-primary px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide">
+                    <div className="absolute top-4 left-4 bg-surface-glass backdrop-blur-sm text-primary px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide">
                       {event.category || 'Event'}
                     </div>
                   </div>
@@ -193,7 +185,7 @@ export default async function HomePage() {
                 Create beautiful event pages, manage ticket sales effortlessly, and get paid securely with our smart invoicing system.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/organizer/events/create" className="bg-accent text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white hover:text-accent transition-colors inline-flex items-center justify-center gap-2">
+                <Link href="/organizer/events/create" className="bg-primary text-primary-foreground px-8 py-4 rounded-xl font-bold text-lg hover:bg-primary-hover transition-colors inline-flex items-center justify-center gap-2">
                   Host an event <ArrowRight size={20} />
                 </Link>
               </div>

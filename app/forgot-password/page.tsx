@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, KeyRound, Smartphone, Lock } from "lucide-react";
 import Link from "next/link";
 import { OtpInput } from "@/components/ui/OtpInput";
+import { formatPhoneNumber } from "@/lib/utils";
 
 export default function ForgotPasswordPage() {
   const [phone, setPhone] = useState("");
@@ -24,12 +25,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError(null);
     
-    let formattedPhone = phone.trim();
-    if (formattedPhone.startsWith("0") && formattedPhone.length === 10) {
-      formattedPhone = `+233${formattedPhone.substring(1)}`;
-    } else if (!formattedPhone.startsWith("+")) {
-      formattedPhone = `+${formattedPhone}`;
-    }
+    const formattedPhone = formatPhoneNumber(phone);
     
     try {
       const res = await fetch("/api/auth/send-otp", {
@@ -68,12 +64,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError(null);
 
-    let formattedPhone = phone.trim();
-    if (formattedPhone.startsWith("0") && formattedPhone.length === 10) {
-      formattedPhone = `+233${formattedPhone.substring(1)}`;
-    } else if (!formattedPhone.startsWith("+")) {
-      formattedPhone = `+${formattedPhone}`;
-    }
+    const formattedPhone = formatPhoneNumber(phone);
 
     try {
       const res = await fetch("/api/auth/reset-password", {

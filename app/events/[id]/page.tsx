@@ -1,19 +1,20 @@
 import { notFound } from "next/navigation";
 import { CalendarDays, Clock3, MapPin, Share2, Ticket, ArrowLeft } from "lucide-react";
 import TicketCheckout from "@/components/ticket-checkout";
-import { events, getEventById, formatGhs } from "@/lib/events";
+import { getEventById, getEvents, formatGhs } from "@/lib/events";
 import Link from "next/link";
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const events = await getEvents();
   return events.map((event) => ({ id: event.id }));
 }
 
 export default async function EventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const event = getEventById(id);
+  const event = await getEventById(id);
   if (!event) notFound();
 
-  const lowestPrice = Math.min(...event.ticketTypes.map((ticket) => ticket.price));
+  const lowestPrice = event.ticketTypes.length > 0 ? Math.min(...event.ticketTypes.map((ticket) => ticket.price)) : 0;
 
   return (
     <main className="min-h-screen bg-background pb-24">
@@ -40,7 +41,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
           
           <div className="absolute bottom-0 left-0 right-0 p-8 sm:p-12 flex flex-col justify-end">
-            <span className="self-start bg-white/90 text-primary text-xs font-bold px-4 py-2 rounded-lg uppercase tracking-wider mb-6 backdrop-blur-sm">
+            <span className="self-start bg-primary text-primary-foreground text-xs font-bold px-4 py-2 rounded-lg uppercase tracking-wider mb-6">
               {event.category}
             </span>
             <p className="text-white/80 font-bold mb-2">From {formatGhs(lowestPrice)}</p>

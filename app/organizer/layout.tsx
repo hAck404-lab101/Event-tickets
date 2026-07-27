@@ -46,6 +46,16 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
     fetchUser();
   }, [supabase, router]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isProfileMenuOpen) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isProfileMenuOpen]);
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push('/login');
@@ -71,8 +81,8 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-accent text-white transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:h-screen ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex items-center justify-between h-16 px-6 border-b border-white/20">
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-primary text-primary-foreground transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:h-screen ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex items-center justify-between h-16 px-6 border-b border-primary-foreground/10">
           <Link href="/organizer/dashboard" className="font-bold text-lg">
             Tixly Organizer
           </Link>
@@ -87,8 +97,8 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   isActive 
-                    ? "bg-white text-accent" 
-                    : "text-white/80 hover:bg-white/10 hover:text-white"
+                    ? "bg-background text-primary" 
+                    : "text-primary-foreground/80 hover:bg-background/20 hover:text-primary-foreground"
                 }`}
               >
                 <item.icon size={18} />
@@ -119,30 +129,36 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
             <div className="relative">
               <button 
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-bold text-sm hover:ring-2 hover:ring-primary/20 transition-all uppercase"
+                className="w-10 h-10 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm hover:ring-2 hover:ring-primary/40 transition-all uppercase"
               >
                 {userProfile?.first_name?.[0] || "O"}
               </button>
               
               {isProfileMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-surface border border-border rounded-xl shadow-lg py-2 z-50">
-                  <div className="px-4 py-2 border-b border-border mb-2">
-                    <p className="text-sm font-bold truncate">{userProfile ? `${userProfile.first_name} ${userProfile.last_name || ''}` : 'Organizer'}</p>
-                    <p className="text-xs text-muted truncate">{userProfile?.email || 'Loading...'}</p>
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setIsProfileMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-48 bg-surface border border-border rounded-xl shadow-lg py-2 z-50">
+                    <div className="px-4 py-2 border-b border-border mb-2">
+                      <p className="text-sm font-bold truncate">{userProfile ? `${userProfile.first_name} ${userProfile.last_name || ''}` : 'Organizer'}</p>
+                      <p className="text-xs text-muted truncate">{userProfile?.email || 'Loading...'}</p>
+                    </div>
+                    <Link href="/organizer/settings" onClick={() => setIsProfileMenuOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-surface-elevated transition-colors">
+                      <Settings size={16} /> Settings
+                    </Link>
+                    <button 
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        handleSignOut();
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-error hover:bg-error-bg transition-colors text-left"
+                    >
+                      <LogOut size={16} /> Sign Out
+                    </button>
                   </div>
-                  <Link href="/organizer/settings" onClick={() => setIsProfileMenuOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-background transition-colors">
-                    <Settings size={16} /> Settings
-                  </Link>
-                  <button 
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      handleSignOut();
-                    }}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
-                  >
-                    <LogOut size={16} /> Sign Out
-                  </button>
-                </div>
+                </>
               )}
             </div>
           </div>

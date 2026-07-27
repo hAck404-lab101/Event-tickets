@@ -2,16 +2,34 @@
 
 @theme {
   --color-background: #0a0a0a;
-  --color-foreground: #f5f5f5;
-  --color-primary: #d4af37;
+  --color-foreground: #e0e0e0;
+  
+  --color-primary: #d4af37; /* Gold */
+  --color-primary-hover: #e8c659;
+  --color-primary-active: #b2912a;
+  --color-primary-muted: #d4af3740; /* 25% opacity */
   --color-primary-foreground: #0a0a0a;
-  --color-accent: #f3e5ab;
-  --color-accent-foreground: #0a0a0a;
+  
   --color-surface: #141414;
+  --color-surface-elevated: #1e1e1e;
+  --color-surface-secondary: #1a1a1a;
+  --color-surface-glass: rgba(20, 20, 20, 0.7);
+  
   --color-border: #2a2a2a;
+  --color-border-focus: #d4af37;
+  
   --color-muted: #888888;
+  
   --color-error: #ef4444;
   --color-error-bg: #3f1616;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  
+  --color-disabled: #2a2a2a;
+  --color-disabled-text: #555555;
+  
+  --color-overlay: rgba(0, 0, 0, 0.8);
+  --color-skeleton: #1f1f1f;
   
   --font-sans: var(--font-inter), Arial, Helvetica, sans-serif;
   --font-serif: var(--font-georgia), Georgia, serif;

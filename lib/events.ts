@@ -1,3 +1,5 @@
+import { createServerClient } from "./supabase/server";
+
 export type TicketType = {
   id: string;
   name: string;
@@ -20,62 +22,82 @@ export type Event = {
   ticketTypes: TicketType[];
 };
 
-export const events: Event[] = [
-  {
-    id: "accra-night-live",
-    title: "Accra Night Live",
-    description: "A high-energy live music experience featuring emerging and established Ghanaian performers, food vendors and an unforgettable crowd atmosphere.",
-    category: "Music",
-    date: "Saturday, 15 August 2026",
-    time: "7:00 PM",
-    venue: "Untamed Empire",
-    city: "Accra",
-    image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1600&q=85",
-    organizer: "Nightlife Ghana",
-    ticketTypes: [
-      { id: "regular", name: "Regular", description: "General admission", price: 120, quantityAvailable: 450 },
-      { id: "vip", name: "VIP", description: "Priority entry and VIP area", price: 280, quantityAvailable: 120 },
-      { id: "vvip", name: "VVIP", description: "Premium seating, drinks and backstage access", price: 600, quantityAvailable: 30 }
-    ]
-  },
-  {
-    id: "creative-business-summit",
-    title: "Creative Business Summit",
-    description: "A practical one-day summit for designers, founders, creators and young professionals building profitable creative businesses.",
-    category: "Business",
-    date: "Friday, 28 August 2026",
-    time: "9:00 AM",
-    venue: "Accra International Conference Centre",
-    city: "Accra",
-    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1600&q=85",
-    organizer: "Create Ghana",
-    ticketTypes: [
-      { id: "student", name: "Student", description: "Valid student ID required", price: 80, quantityAvailable: 300 },
-      { id: "professional", name: "Professional", description: "Full summit access", price: 180, quantityAvailable: 400 },
-      { id: "team", name: "Team Pass", description: "Entry for five team members", price: 750, quantityAvailable: 40 }
-    ]
-  },
-  {
-    id: "food-and-culture-fest",
-    title: "Food & Culture Fest",
-    description: "Celebrate Ghanaian food, music, fashion and culture with local vendors, live performances and family-friendly activities.",
-    category: "Lifestyle",
-    date: "Sunday, 6 September 2026",
-    time: "11:00 AM",
-    venue: "Jubilee Park",
-    city: "Ho",
-    image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1600&q=85",
-    organizer: "Volta Experiences",
-    ticketTypes: [
-      { id: "early-bird", name: "Early Bird", description: "Limited discounted entry", price: 50, quantityAvailable: 200 },
-      { id: "standard", name: "Standard", description: "General event access", price: 75, quantityAvailable: 600 },
-      { id: "family", name: "Family Pass", description: "Entry for two adults and two children", price: 220, quantityAvailable: 100 }
-    ]
-  }
-];
+export async function getEvents(): Promise<Event[]> {
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select(`
+      *,
+      categories(name),
+      organizers(business_name),
+      ticket_types(*)
+    `)
+    // .eq("status", "published") // Uncomment if you want to only show published events, but for dev it might be empty
+    .order("starts_at", { ascending: true });
 
-export function getEventById(id: string) {
-  return events.find((event) => event.id === id);
+  if (error || !data) {
+    console.error("Error fetching events:", error);
+    return [];
+  }
+
+  return data.map((e: any) => ({
+    id: e.id,
+    title: e.title,
+    description: e.description,
+    category: e.categories?.name || "Event",
+    date: new Date(e.starts_at).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+    time: new Date(e.starts_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+    venue: e.location ? e.location.split(',')[0] : "Venue TBA",
+    city: e.location ? e.location.split(',')[1]?.trim() || "City TBA" : "City TBA",
+    image: e.image_url || e.banner_url || "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1600&q=85",
+    organizer: e.organizers?.business_name || "Organizer",
+    ticketTypes: e.ticket_types?.map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      description: t.description || "",
+      price: Number(t.price),
+      quantityAvailable: t.quantity_total - t.quantity_sold
+    })) || []
+  }));
+}
+
+export async function getEventById(id: string): Promise<Event | null> {
+  const supabase = createServerClient();
+  const { data: e, error } = await supabase
+    .from("events")
+    .select(`
+      *,
+      categories(name),
+      organizers(business_name),
+      ticket_types(*)
+    `)
+    .eq("id", id)
+    .single();
+
+  if (error || !e) {
+    console.error("Error fetching event by id:", error);
+    return null;
+  }
+
+  return {
+    id: e.id,
+    title: e.title,
+    description: e.description,
+    category: e.categories?.name || "Event",
+    date: new Date(e.starts_at).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+    time: new Date(e.starts_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+    venue: e.location ? e.location.split(',')[0] : "Venue TBA",
+    city: e.location ? e.location.split(',')[1]?.trim() || "City TBA" : "City TBA",
+    image: e.image_url || e.banner_url || "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1600&q=85",
+    organizer: e.organizers?.business_name || "Organizer",
+    ticketTypes: e.ticket_types?.map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      description: t.description || "",
+      price: Number(t.price),
+      quantityAvailable: t.quantity_total - t.quantity_sold
+    })) || []
+  };
 }
 
 export function formatGhs(amount: number) {

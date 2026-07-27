@@ -7,16 +7,9 @@ const supabase = createClient(
 );
 
 async function test() {
-  const { data, error } = await supabase.auth.admin.createUser({
-    phone: '+233999999999',
-    password: 'password123',
-    phone_confirm: false,
-  });
-  if (error) {
-    console.error("Create error:", error);
-  } else {
-    console.log("Success:", data);
-  }
+  const { data, error } = await supabase.from('categories').select('*').limit(1);
+  if (error) console.error("Error", error);
+  else console.log("Data", data);
 }
 
 test();

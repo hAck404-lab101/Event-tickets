@@ -44,6 +44,13 @@ export async function POST(req: Request) {
       const errorMessage = typeof createError === 'object' && createError !== null && 'message' in createError 
         ? createError.message 
         : typeof createError === 'string' ? createError : "Failed to create user account. It may already exist.";
+        
+      if (errorMessage.toLowerCase().includes("already registered") || errorMessage.toLowerCase().includes("already exists")) {
+        // Idempotency: User exists. Allow flow to proceed to signInWithPassword
+        // which will validate their password.
+        return NextResponse.json({ success: true, message: "User already exists, proceeding to login" });
+      }
+      
       return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 
