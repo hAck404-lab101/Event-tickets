@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   try {
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Password must be at least 6 characters long." }, { status: 400 });
     }
 
-    const supabase = createServerClient();
+    const supabase = getAdminClient();
 
     // 1. Verify OTP from custom table
     const { data: otps, error: dbError } = await supabase
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid or expired code." }, { status: 400 });
     }
 
-    // 2. Mark OTP as used by deleting it (or all otps for this phone)
+    // 2. Mark OTP as used by deleting it
     await supabase.from("otps").delete().eq("phone", phone);
 
     // 3. Find the user

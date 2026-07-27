@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   try {
@@ -9,7 +9,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const supabase = createServerClient();
+    const supabase = getAdminClient();
 
     // 1. Verify OTP from custom table
     const { data: otps, error: dbError } = await supabase
@@ -37,20 +37,19 @@ export async function POST(req: Request) {
       email_confirm: true,
       user_metadata: {
         name: name,
-        role: role // 'user' or 'organizer'
+        role: role
       }
     });
 
     if (createError) {
       console.error("Create User Error:", createError);
       const errorMessage = typeof createError === 'object' && createError !== null && 'message' in createError 
-        ? createError.message 
+        ? (createError as any).message 
         : typeof createError === 'string' ? createError : "Failed to create user account. It may already exist.";
         
       return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 
-    // Return success. The client can now call signInWithPassword.
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error(err);

@@ -1,10 +1,10 @@
 import { CreditCard, Users, CalendarDays, Ticket, TrendingUp, AlertCircle, Building2 } from "lucide-react";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/server";
 import { formatGhs } from "@/lib/events";
 
 export default async function AdminOverview() {
-  const supabase = createServerClient();
+  const supabase = getAdminClient();
   
   // Fetch live metrics
   const { data: totalRevenueData } = await supabase

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   try {
@@ -10,9 +10,8 @@ export async function POST(req: Request) {
     const normalizedPhone = phone.startsWith("+") ? phone.substring(1) : phone;
     const withPlus = `+${normalizedPhone}`;
 
-    const supabase = createServerClient();
+    const supabase = getAdminClient();
     
-    // We will page through listUsers if there are many users, but for now getting the first page is usually enough for a prototype.
     const { data: users, error } = await supabase.auth.admin.listUsers();
     
     if (error) {
