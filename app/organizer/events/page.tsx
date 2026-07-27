@@ -1,14 +1,15 @@
 import { CalendarDays, Plus, MapPin, Ticket, TrendingUp } from "lucide-react";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, getAdminClient } from "@/lib/supabase/server";
 
 export default async function OrganizerEventsPage() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const adminSupabase = getAdminClient();
 
-  // First get the organizer record for this user using maybeSingle()
+  // First get the organizer record for this user
   let { data: organizer } = user
-    ? await supabase
+    ? await adminSupabase
         .from('organizers')
         .select('id, business_name')
         .eq('owner_id', user.id)
@@ -18,7 +19,7 @@ export default async function OrganizerEventsPage() {
   // If no organizer profile exists yet, auto-create one
   if (!organizer && user) {
     const defaultName = user.user_metadata?.business_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'My Organization';
-    const { data: newOrg } = await supabase
+    const { data: newOrg } = await adminSupabase
       .from('organizers')
       .insert({ owner_id: user.id, business_name: defaultName, contact_email: user.email })
       .select('id, business_name')
@@ -28,7 +29,7 @@ export default async function OrganizerEventsPage() {
 
   // Then fetch events belonging to this organizer
   const { data: events, error } = organizer
-    ? await supabase
+    ? await adminSupabase
         .from('events')
         .select(`
           *,

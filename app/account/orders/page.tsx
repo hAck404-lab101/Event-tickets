@@ -1,18 +1,19 @@
 import { Receipt, CalendarDays, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, getAdminClient } from "@/lib/supabase/server";
 import { formatGhs } from "@/lib/events";
 
 export default async function MyOrders() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const adminSupabase = getAdminClient();
 
   // Fetch real orders associated with the logged-in user by customer_id OR customer_email
   let orders: any[] = [];
   if (user) {
     const userEmail = user.email?.toLowerCase();
     const query = userEmail
-      ? supabase
+      ? adminSupabase
           .from("orders")
           .select(`
             id, reference, total, payment_status, created_at,
@@ -20,7 +21,7 @@ export default async function MyOrders() {
           `)
           .or(`customer_id.eq.${user.id},customer_email.ilike.${userEmail}`)
           .order("created_at", { ascending: false })
-      : supabase
+      : adminSupabase
           .from("orders")
           .select(`
             id, reference, total, payment_status, created_at,

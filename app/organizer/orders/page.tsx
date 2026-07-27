@@ -1,21 +1,22 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, getAdminClient } from "@/lib/supabase/server";
 import OrdersClient from "./OrdersClient";
 
 export default async function OrganizerOrdersPage() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const adminSupabase = getAdminClient();
 
   let orders: any[] = [];
 
   if (user) {
-    const { data: organizer } = await supabase
+    const { data: organizer } = await adminSupabase
       .from('organizers')
       .select('id')
       .eq('owner_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (organizer) {
-      const { data: eventIds } = await supabase
+      const { data: eventIds } = await adminSupabase
         .from('events')
         .select('id')
         .eq('organizer_id', organizer.id);
@@ -23,7 +24,7 @@ export default async function OrganizerOrdersPage() {
       const ids = eventIds?.map(e => e.id) || [];
       
       if (ids.length > 0) {
-        const { data: ordersData } = await supabase
+        const { data: ordersData } = await adminSupabase
           .from('orders')
           .select('*, events(title), order_items(quantity, unit_price, ticket_types(name))')
           .in('event_id', ids)

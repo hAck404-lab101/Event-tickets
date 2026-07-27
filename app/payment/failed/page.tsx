@@ -1,6 +1,6 @@
 import { XCircle, RefreshCw, ArrowLeft, Ticket } from "lucide-react";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/server";
 
 export default async function PaymentFailedPage({
   searchParams,
@@ -9,7 +9,7 @@ export default async function PaymentFailedPage({
 }) {
   const { reference, eventId } = await searchParams;
 
-  const supabase = createServerClient();
+  const supabase = getAdminClient();
   let order: any = null;
 
   if (reference) {

@@ -1,6 +1,6 @@
 import { Ticket, CheckCircle2, ArrowRight, Download } from "lucide-react";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/server";
 import { formatGhs } from "@/lib/events";
 
 export default async function PaymentSuccessPage({
@@ -10,7 +10,7 @@ export default async function PaymentSuccessPage({
 }) {
   const { reference, orderId } = await searchParams;
 
-  const supabase = createServerClient();
+  const supabase = getAdminClient();
 
   let order: any = null;
   let tickets: any[] = [];

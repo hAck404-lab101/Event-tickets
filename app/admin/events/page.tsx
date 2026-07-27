@@ -1,13 +1,12 @@
 import { CalendarDays, Filter, Plus, Search, Tag, Eye, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/server";
 
 export default async function AdminEventsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const { status: statusParam } = await searchParams;
   const statusFilter = statusParam;
-  const supabase = createServerClient();
+  const supabase = getAdminClient();
 
-  
   let query = supabase
     .from('events')
     .select(`
@@ -43,7 +42,7 @@ export default async function AdminEventsPage({ searchParams }: { searchParams: 
           <h1 className="text-3xl font-serif font-bold text-primary">Events</h1>
           <p className="text-muted mt-1">Manage platform events, approvals, and featuring.</p>
         </div>
-        <Link href="/admin/events/create" className="bg-primary text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-opacity-90 flex items-center gap-2 transition-colors">
+        <Link href="/organizer/events/create" className="bg-primary text-primary-foreground px-4 py-2 rounded-lg font-bold text-sm hover:bg-opacity-90 flex items-center gap-2 transition-colors">
           <Plus size={18} /> New Event
         </Link>
       </div>

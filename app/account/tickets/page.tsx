@@ -1,18 +1,19 @@
 import { Ticket, CalendarDays, MapPin } from "lucide-react";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, getAdminClient } from "@/lib/supabase/server";
 
 export default async function MyTickets() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const adminSupabase = getAdminClient();
 
   // 1. Get user's orders matching customer_id OR customer_email
   let orderIds: string[] = [];
   if (user) {
     const userEmail = user.email?.toLowerCase();
     const query = userEmail
-      ? supabase.from("orders").select("id").or(`customer_id.eq.${user.id},customer_email.ilike.${userEmail}`)
-      : supabase.from("orders").select("id").eq("customer_id", user.id);
+      ? adminSupabase.from("orders").select("id").or(`customer_id.eq.${user.id},customer_email.ilike.${userEmail}`)
+      : adminSupabase.from("orders").select("id").eq("customer_id", user.id);
 
     const { data: orders } = await query;
     orderIds = orders?.map((o) => o.id) || [];
@@ -20,7 +21,7 @@ export default async function MyTickets() {
 
   // 2. Get tickets for those orders
   const { data: ticketsData } = orderIds.length > 0
-    ? await supabase
+    ? await adminSupabase
         .from("tickets")
         .select(`
           id, ticket_code, status, attendee_name,

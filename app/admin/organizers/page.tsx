@@ -1,9 +1,9 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/server";
 import { Building2, CheckCircle2, Clock, XCircle, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
 export default async function AdminOrganizersPage() {
-  const supabase = createServerClient();
+  const supabase = getAdminClient();
 
   const { data: organizers } = await supabase
     .from("organizers")

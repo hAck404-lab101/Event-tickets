@@ -1,15 +1,20 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, getAdminClient } from "@/lib/supabase/server";
 import { Users } from "lucide-react";
 import InviteClient from "./InviteClient";
 
 export default async function OrganizerTeamPage() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const adminSupabase = getAdminClient();
 
-  let profile = null;
+  let profile: any = null;
   if (user) {
-    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-    profile = data;
+    const { data } = await adminSupabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    profile = data || {
+      first_name: user.user_metadata?.first_name || user.email?.split('@')[0],
+      last_name: user.user_metadata?.last_name || '',
+      email: user.email,
+    };
   }
 
   return (

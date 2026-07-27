@@ -1,10 +1,10 @@
-import { createServerClient } from "@/lib/supabase/server";
-import { Receipt, CreditCard, CalendarDays, Search } from "lucide-react";
+import { getAdminClient } from "@/lib/supabase/server";
+import { Receipt, CreditCard, CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { formatGhs } from "@/lib/events";
 
 export default async function AdminOrdersPage() {
-  const supabase = createServerClient();
+  const supabase = getAdminClient();
 
   const { data: orders } = await supabase
     .from("orders")

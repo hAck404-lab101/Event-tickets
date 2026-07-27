@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createServerClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/server";
 import { CalendarDays, Clock3, MapPin, Ticket as TicketIcon, CheckCircle2, Download, CalendarPlus } from "lucide-react";
 import Link from "next/link";
 import { formatGhs } from "@/lib/events";
@@ -8,7 +8,7 @@ import DownloadTicketButton from "./DownloadTicketButton";
 export default async function TicketConfirmationPage({ params }: { params: Promise<{ id: string; ticketId: string }> }) {
   const { id: eventId, ticketId } = await params;
 
-  const supabase = createServerClient();
+  const supabase = getAdminClient();
   const { data: ticket, error } = await supabase
     .from('tickets')
     .select(`
