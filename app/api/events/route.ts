@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, getAdminClient } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
 
 // Service-role client to bypass RLS for admin operations
