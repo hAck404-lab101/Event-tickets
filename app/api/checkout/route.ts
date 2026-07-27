@@ -102,78 +102,61 @@ export async function POST(request: Request) {
       console.error("Order Item Insert Error:", itemError);
     }
 
-    // 3. Initiate DoronX Smart Invoicing API Call
-    const doronxApiUrl = process.env.DORONX_API_URL || "https://webapi.doronpay.com";
-    const doronxApiKey = process.env.DORONX_API_KEY;
-
-    let checkoutUrl: string | null = null;
-    let invoiceId: string | null = null;
-
+    // 3. Initiate DoronX Smart Invoicing API Call directly
+    const doronxApiKey = process.env.DORONX_API_KEY || "drx_live_de491229fa84aaa33702feeaeb32bca3e2e450b724fc3712d5242b6eec42eacc";
     const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
     const callbackUrl = `${origin}/payment/pending?reference=${reference}`;
     const webhookUrl = `${origin}/api/webhooks/doronx`;
 
-    if (doronxApiKey) {
-      const endpointsToTry = [
-        `${doronxApiUrl.replace(/\/$/, "")}/smart-invoicing`,
-        `${doronxApiUrl.replace(/\/$/, "")}/v1/invoices`,
-        `https://webapi.doronpay.com/smart-invoicing`,
-      ];
+    let checkoutUrl: string | null = null;
+    let invoiceId: string | null = null;
 
-      for (const endpoint of endpointsToTry) {
-        if (checkoutUrl) break;
-        try {
-          const invoiceRes = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${doronxApiKey}`,
-              "x-api-key": doronxApiKey,
-            },
-            body: JSON.stringify({
-              customer: {
-                name: customerName.trim(),
-                email: formattedEmail,
-                phone: formattedPhone,
-              },
-              items: [
-                {
-                  name: `${ticketName} - ${eventTitle || "Event Ticket"}`,
-                  quantity,
-                  unit_price: unitPrice,
-                },
-              ],
-              amount: total,
-              currency: "GHS",
-              reference,
-              payment_method: paymentMethod, // 'momo' or 'crypto'
-              callback_url: callbackUrl,
-              webhook_url: webhookUrl,
-            }),
-          });
+    const endpoint = "https://webapi.doronpay.com/smart-invoicing/invoices";
+    const assetType = paymentMethod === "crypto" ? "USDT" : "GHS";
+    const networkType = paymentMethod === "crypto" ? "TRC20" : "BEP20";
 
-          if (invoiceRes.ok) {
-            const invoiceData = await invoiceRes.json();
-            checkoutUrl =
-              invoiceData.invoice_url ||
-              invoiceData.checkout_url ||
-              invoiceData.payment_url ||
-              invoiceData.url ||
-              invoiceData.data?.url;
-            invoiceId = invoiceData.invoice_id || invoiceData.id || invoiceData.data?.id || null;
+    try {
+      const invoiceRes = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-doronpay-api-key": doronxApiKey,
+          "Authorization": `Bearer ${doronxApiKey}`,
+        },
+        body: JSON.stringify({
+          asset: assetType,
+          network: networkType,
+          amount: total,
+          currency: "GHS",
+          reference: reference,
+          callback_url: callbackUrl,
+          webhook_url: webhookUrl,
+        }),
+      });
 
-            if (invoiceId) {
-              await supabaseAdmin.from("orders").update({ invoice_id: invoiceId }).eq("id", order.id);
-            }
-          }
-        } catch (doronxErr) {
-          console.warn(`DoronX fetch to ${endpoint} failed:`, doronxErr);
+      const invoiceData = await invoiceRes.json();
+      console.log("DoronX Direct Invoice API Status:", invoiceRes.status, "Response:", invoiceData);
+
+      if (invoiceRes.ok && invoiceData) {
+        checkoutUrl =
+          invoiceData.invoice_url ||
+          invoiceData.checkout_url ||
+          invoiceData.payment_url ||
+          invoiceData.url ||
+          invoiceData.data?.url ||
+          invoiceData.data?.invoice_url;
+
+        invoiceId = invoiceData.invoice_id || invoiceData.id || invoiceData.data?.id || null;
+
+        if (invoiceId) {
+          await supabaseAdmin.from("orders").update({ invoice_id: invoiceId }).eq("id", order.id);
         }
       }
+    } catch (doronxErr) {
+      console.warn("DoronX direct API fetch error:", doronxErr);
     }
 
-    // 4. Return checkout URL if available, otherwise redirect to pending page with order reference
-    // Order strictly remains in 'pending' status until verified by DoronX webhook
+    // 4. Redirect to DoronX checkout portal if generated, otherwise to /payment/pending?reference=TX-...
     const finalUrl = checkoutUrl || callbackUrl;
 
     return NextResponse.json({
@@ -181,7 +164,7 @@ export async function POST(request: Request) {
       paymentUrl: finalUrl,
       reference,
       orderId: order.id,
-      pending: !checkoutUrl,
+      hasDirectInvoice: !!checkoutUrl,
     });
   } catch (error: any) {
     console.error("Checkout Error:", error);
