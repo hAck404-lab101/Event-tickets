@@ -137,12 +137,8 @@ function PaymentPendingContent() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const totalNumber = Number(order?.total || 0);
-  const orderTotalFormatted = totalNumber > 0
-    ? `₵${totalNumber.toFixed(2)}`
-    : loadingOrder
-    ? "..."
-    : "Calculating...";
+  const totalNum = order?.total ? Number(order.total) : 0;
+  const orderTotalDisplay = totalNum > 0 ? `₵${totalNum.toFixed(2)}` : "...";
 
   return (
     <div className="max-w-lg w-full">
@@ -180,7 +176,7 @@ function PaymentPendingContent() {
           {loadingOrder && !order ? (
             <div className="bg-surface-elevated border border-border rounded-2xl p-4 flex items-center justify-center gap-2 text-muted text-sm">
               <Loader2 size={16} className="animate-spin text-primary" />
-              <span>Loading order summary...</span>
+              <span>Fetching order amount...</span>
             </div>
           ) : (
             <div className="bg-surface-elevated border border-border rounded-2xl p-4 space-y-2 text-sm">
@@ -194,7 +190,7 @@ function PaymentPendingContent() {
               </div>
               <div className="flex justify-between text-muted pt-2 border-t border-border">
                 <span className="font-bold text-primary">Total Amount</span>
-                <strong className="text-lg font-serif text-primary font-bold">{orderTotalFormatted}</strong>
+                <strong className="text-lg font-serif text-primary font-bold">{orderTotalDisplay}</strong>
               </div>
             </div>
           )}
@@ -215,7 +211,7 @@ function PaymentPendingContent() {
                 <strong className="text-primary font-bold">TRC-20 / Solana / BEP-20</strong>
               </div>
               <p className="pt-2 text-muted leading-relaxed">
-                Send the exact USDT / Crypto equivalent for <strong className="text-primary">{orderTotalFormatted}</strong> with reference code <strong className="font-mono text-primary">{reference || order?.reference}</strong>.
+                Send the exact USDT / Crypto equivalent for <strong className="text-primary">{orderTotalDisplay}</strong> with reference code <strong className="font-mono text-primary">{reference || order?.reference}</strong>.
               </p>
             </div>
           </div>

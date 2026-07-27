@@ -105,12 +105,14 @@ export async function POST(request: Request) {
     }
 
     // 3. Direct Invoice Call on DoronX API (https://webapi.doronpay.com/smart-invoicing/invoices)
-    const doronxApiKey = process.env.DORONX_API_KEY || "drx_live_de491229fa84aaa33702feeaeb32bca3e2e450b724fc3712d5242b6eec42eacc";
+    const doronxApiKey = process.env.DORONX_API_KEY || "drx_live_6106b6e78d21eac22972e7a148b0b2accc304fbcd8f9a724497870f958b7783f";
     const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
     const callbackUrl = `${origin}/payment/pending?reference=${reference}`;
 
     let checkoutUrl: string | null = null;
     let invoiceId: string | null = null;
+    let referenceCode: string | null = null;
+    let doronxErrorMsg: string | null = null;
 
     const endpoint = "https://webapi.doronpay.com/smart-invoicing/invoices";
 
@@ -128,7 +130,7 @@ export async function POST(request: Request) {
           amount: total,
           currency: "GHS",
           asset: cryptoAsset, // 'USDT' or 'BTC'
-          network: cryptoNetwork, // 'TRC20' or 'BTC'
+          network: cryptoNetwork, // 'TRC20', 'SOLANA', etc.
           description: `${quantity}x ${ticketName} - ${eventTitle || "Event Ticket"} (${reference})`,
           forceRateRefresh: true,
         }),
@@ -139,32 +141,76 @@ export async function POST(request: Request) {
 
       if (invoiceRes.ok && invoiceData) {
         const inv = invoiceData.data?.invoice || invoiceData.invoice || invoiceData.data || invoiceData;
+        referenceCode = inv.referenceCode || inv.reference_code || null;
+        invoiceId = inv._id || inv.invoiceId || inv.id || null;
+
         checkoutUrl =
           inv.paymentUrl ||
           inv.checkout_url ||
+          inv.checkoutUrl ||
           inv.invoice_url ||
+          inv.invoiceUrl ||
+          inv.hosted_url ||
           inv.url ||
-          (inv.invoiceId ? `https://app.doronx.com/#/invoices/${inv.invoiceId}` : null);
-
-        invoiceId = inv.invoiceId || inv.id || inv._id || null;
-
-        if (invoiceId) {
-          await supabaseAdmin.from("orders").update({ invoice_id: invoiceId }).eq("id", order.id);
-        }
+          (referenceCode ? `https://pay.doronx.com/sikaflow/i/${referenceCode}` : null) ||
+          (invoiceId ? `https://app.doronx.com/#/invoices/${invoiceId}` : null);
+      } else {
+        doronxErrorMsg = invoiceData?.message || invoiceData?.error || null;
       }
-    } catch (doronxErr) {
+    } catch (doronxErr: any) {
       console.warn("DoronX invoice API fetch error:", doronxErr);
+      doronxErrorMsg = doronxErr.message || "Network error connecting to DoronX";
     }
 
-    // 4. Redirect to DoronX direct invoice checkout link if created, otherwise to /payment/pending
+    // 4. Automatic Invoice Lookup Fallback if URL wasn't directly returned in body
+    if (!checkoutUrl) {
+      try {
+        const listRes = await fetch(`${endpoint}?limit=5`, {
+          headers: { "x-doronpay-api-key": doronxApiKey },
+        });
+        const listData = await listRes.json();
+
+        if (listRes.ok && listData?.data && Array.isArray(listData.data)) {
+          const matched = listData.data.find((inv: any) =>
+            (inv.description && inv.description.includes(reference)) ||
+            (inv.payerEmail && inv.payerEmail.toLowerCase() === formattedEmail)
+          ) || listData.data[0];
+
+          if (matched) {
+            invoiceId = matched._id || matched.invoiceId || matched.id || null;
+            referenceCode = matched.referenceCode || matched.reference_code || null;
+            checkoutUrl =
+              matched.paymentUrl ||
+              matched.checkout_url ||
+              matched.invoice_url ||
+              matched.url ||
+              (referenceCode ? `https://pay.doronx.com/sikaflow/i/${referenceCode}` : null) ||
+              (matched._id ? `https://app.doronx.com/#/invoices/${matched._id}` : null);
+          }
+        }
+      } catch (listErr) {
+        console.warn("Could not auto-fetch created invoice fallback:", listErr);
+      }
+    }
+
+    // Save invoice_id to Supabase order if found
+    if (invoiceId) {
+      await supabaseAdmin.from("orders").update({ invoice_id: invoiceId }).eq("id", order.id);
+    }
+
+    // 5. Return Direct DoronX Pay Link (`https://pay.doronx.com/sikaflow/i/DRXREF...`) or Pending Fallback URL
     const finalUrl = checkoutUrl || callbackUrl;
 
     return NextResponse.json({
       success: true,
       paymentUrl: finalUrl,
+      directCheckoutUrl: checkoutUrl,
+      pendingUrl: callbackUrl,
       reference,
+      referenceCode,
       orderId: order.id,
       hasDirectInvoice: !!checkoutUrl,
+      doronxError: doronxErrorMsg,
     });
   } catch (error: any) {
     console.error("Checkout Error:", error);

@@ -1,16 +1,32 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { LoaderCircle, Minus, Plus, Coins, ShieldCheck } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { LoaderCircle, Minus, Plus, Coins, Layers, CheckCircle2 } from "lucide-react";
 import type { Event } from "@/lib/events";
 import { formatGhs } from "@/lib/events";
+import { toast } from "sonner";
 
 type Props = { event: Event };
+
+interface WalletProfile {
+  id: string;
+  asset: string;
+  network: string;
+  address: string;
+  label: string;
+  isDefault: boolean;
+}
 
 export default function TicketCheckout({ event }: Props) {
   const [ticketId, setTicketId] = useState(event.ticketTypes[0].id);
   const [quantity, setQuantity] = useState(1);
-  const [cryptoAsset, setCryptoAsset] = useState<"USDT" | "BTC">("USDT");
+
+  // Dynamic DoronX Wallets
+  const [wallets, setWallets] = useState<WalletProfile[]>([]);
+  const [loadingWallets, setLoadingWallets] = useState(true);
+
+  const [cryptoAsset, setCryptoAsset] = useState<string>("USDT");
+  const [cryptoNetwork, setCryptoNetwork] = useState<string>("TRC20");
   const [customer, setCustomer] = useState({ name: "", email: "", phone: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -20,12 +36,69 @@ export default function TicketCheckout({ event }: Props) {
   const serviceFee = useMemo(() => Math.round(subtotal * 0.03 * 100) / 100, [subtotal]);
   const total = subtotal + serviceFee;
 
+  // Fetch active merchant wallets from DoronX dashboard
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchWallets() {
+      try {
+        const res = await fetch("/api/doronx/wallets");
+        const data = await res.json();
+        if (isMounted && res.ok && data.wallets && data.wallets.length > 0) {
+          setWallets(data.wallets);
+          // Set initial asset/network to first active default wallet
+          const defaultWallet = data.wallets.find((w: WalletProfile) => w.isDefault) || data.wallets[0];
+          if (defaultWallet) {
+            setCryptoAsset(defaultWallet.asset);
+            setCryptoNetwork(defaultWallet.network);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not load dynamic DoronX wallets:", e);
+      } finally {
+        if (isMounted) setLoadingWallets(false);
+      }
+    }
+    fetchWallets();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Filter unique assets from active wallets (e.g. USDT, BTC)
+  const availableAssets = useMemo(() => {
+    if (wallets.length === 0) return ["USDT", "BTC"];
+    const unique = Array.from(new Set(wallets.map((w) => w.asset)));
+    return unique;
+  }, [wallets]);
+
+  // Filter available networks for currently selected asset
+  const availableNetworksForAsset = useMemo(() => {
+    if (wallets.length === 0) {
+      return cryptoAsset === "USDT" ? ["TRC20", "ERC20", "BEP20", "SOLANA", "POLYGON"] : ["BTC"];
+    }
+    const matching = wallets.filter((w) => w.asset === cryptoAsset).map((w) => w.network);
+    return matching.length > 0 ? Array.from(new Set(matching)) : [cryptoAsset === "USDT" ? "TRC20" : "BTC"];
+  }, [wallets, cryptoAsset]);
+
+  // Handle Asset Switch
+  const handleSelectAsset = (asset: string) => {
+    setCryptoAsset(asset);
+    const matchingWallets = wallets.filter((w) => w.asset === asset);
+    if (matchingWallets.length > 0) {
+      setCryptoNetwork(matchingWallets[0].network);
+    } else {
+      setCryptoNetwork(asset === "USDT" ? "TRC20" : "BTC");
+    }
+  };
+
   async function handleCheckout(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
+      // Map network names if needed (e.g. SOLANA -> SOL or SOLANA)
+      let networkToSend = cryptoNetwork;
+      if (networkToSend === "SOLANA") networkToSend = "SOLANA";
+
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -38,7 +111,7 @@ export default function TicketCheckout({ event }: Props) {
           unitPrice: ticket.price,
           paymentMethod: "crypto",
           cryptoAsset: cryptoAsset,
-          cryptoNetwork: cryptoAsset === "USDT" ? "TRC20" : "BTC",
+          cryptoNetwork: networkToSend,
           customerEmail: customer.email,
           customerPhone: customer.phone,
           customerName: customer.name
@@ -47,7 +120,17 @@ export default function TicketCheckout({ event }: Props) {
 
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Unable to start checkout");
-      window.location.href = result.paymentUrl;
+
+      if (result.directCheckoutUrl) {
+        toast.success("Opening DoronX invoice payment page...");
+        window.open(result.directCheckoutUrl, "_blank");
+        window.location.href = result.pendingUrl;
+      } else {
+        if (result.doronxError) {
+          console.warn("DoronX API Notice:", result.doronxError);
+        }
+        window.location.href = result.paymentUrl;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to start checkout");
       setLoading(false);
@@ -110,48 +193,85 @@ export default function TicketCheckout({ event }: Props) {
         </div>
       </div>
 
-      {/* Crypto Asset Selection */}
-      <div className="mb-8">
-        <label className="block text-sm font-bold text-primary mb-3">Select Crypto Payment Asset</label>
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => setCryptoAsset("USDT")}
-            className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between ${
-              cryptoAsset === "USDT"
-                ? "border-primary bg-primary/10 ring-1 ring-primary text-primary"
-                : "border-border bg-background text-muted hover:border-primary/40"
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <Coins size={22} className="text-accent" />
-              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-primary/20 text-primary">TRC-20</span>
-            </div>
-            <div>
-              <strong className="block text-sm text-primary font-bold">USDT (Tether)</strong>
-              <span className="text-xs text-muted">Stablecoin (TRC20)</span>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setCryptoAsset("BTC")}
-            className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between ${
-              cryptoAsset === "BTC"
-                ? "border-primary bg-primary/10 ring-1 ring-primary text-primary"
-                : "border-border bg-background text-muted hover:border-primary/40"
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <Coins size={22} className="text-yellow-500" />
-              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-yellow-900/30 text-yellow-500">Bitcoin</span>
-            </div>
-            <div>
-              <strong className="block text-sm text-primary font-bold">BTC (Bitcoin)</strong>
-              <span className="text-xs text-muted">Native Blockchain</span>
-            </div>
-          </button>
+      {/* Crypto Asset Selection - Dynamic from DoronX Dashboard */}
+      <div className="mb-8 space-y-4">
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-bold text-primary">Select Crypto Payment Asset</label>
+          {loadingWallets ? (
+            <span className="text-xs text-muted flex items-center gap-1">
+              <LoaderCircle size={12} className="animate-spin text-primary" /> Syncing DoronX wallets...
+            </span>
+          ) : (
+            <span className="text-[11px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <CheckCircle2 size={12} /> {wallets.length} DoronX Wallets Active
+            </span>
+          )}
         </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {availableAssets.map((asset) => {
+            const isSelected = cryptoAsset === asset;
+            const isUsdt = asset === "USDT";
+            return (
+              <button
+                type="button"
+                key={asset}
+                onClick={() => handleSelectAsset(asset)}
+                className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between ${
+                  isSelected
+                    ? "border-primary bg-primary/10 ring-1 ring-primary text-primary"
+                    : "border-border bg-background text-muted hover:border-primary/40"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <Coins size={22} className={isUsdt ? "text-accent" : "text-yellow-500"} />
+                  <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
+                    isSelected ? "bg-primary/20 text-primary" : "bg-surface text-muted"
+                  }`}>
+                    {isSelected ? cryptoNetwork : asset}
+                  </span>
+                </div>
+                <div>
+                  <strong className="block text-sm text-primary font-bold">
+                    {isUsdt ? "USDT (Tether)" : `${asset} (${asset === "BTC" ? "Bitcoin" : asset})`}
+                  </strong>
+                  <span className="text-xs text-muted">
+                    {isUsdt ? "Stablecoin" : "Crypto Asset"}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Dynamic USDT Network Type Selector */}
+        {cryptoAsset === "USDT" && availableNetworksForAsset.length > 0 && (
+          <div className="bg-background border border-border rounded-2xl p-4 space-y-2 animate-in fade-in duration-200">
+            <div className="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-wider">
+              <Layers size={14} className="text-accent" />
+              <span>Select Active USDT Network</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              {availableNetworksForAsset.map((net) => {
+                const isNetSelected = cryptoNetwork === net;
+                return (
+                  <button
+                    type="button"
+                    key={net}
+                    onClick={() => setCryptoNetwork(net)}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all text-center ${
+                      isNetSelected
+                        ? "border-primary bg-primary text-white shadow-md"
+                        : "border-border bg-surface text-muted hover:border-primary/50 hover:text-primary"
+                    }`}
+                  >
+                    {net}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4 mb-8">
@@ -212,11 +332,11 @@ export default function TicketCheckout({ event }: Props) {
         {loading ? (
           <><LoaderCircle className="animate-spin" size={20} /> Generating DoronX Invoice...</>
         ) : (
-          `Pay ${formatGhs(total)} via ${cryptoAsset}`
+          `Pay ${formatGhs(total)} via ${cryptoAsset} (${cryptoNetwork})`
         )}
       </button>
       <p className="text-center text-muted text-xs font-medium mt-4">
-        You will be redirected to the live DoronX Invoice link ({cryptoAsset} {cryptoAsset === 'USDT' ? 'TRC20' : 'BTC'}).
+        You will be redirected to the live DoronX Invoice link ({cryptoAsset} {cryptoNetwork}).
       </p>
     </form>
   );
