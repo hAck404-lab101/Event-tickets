@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { LoaderCircle, Minus, Plus, Coins, Layers, CheckCircle2 } from "lucide-react";
+import { LoaderCircle, Minus, Plus, Coins, CheckCircle2 } from "lucide-react";
 import type { Event } from "@/lib/events";
 import { formatGhs } from "@/lib/events";
 import { toast } from "sonner";
@@ -95,7 +95,6 @@ export default function TicketCheckout({ event }: Props) {
     setLoading(true);
 
     try {
-      // Map network names if needed (e.g. SOLANA -> SOL or SOLANA)
       let networkToSend = cryptoNetwork;
       if (networkToSend === "SOLANA") networkToSend = "SOLANA";
 
@@ -248,7 +247,7 @@ export default function TicketCheckout({ event }: Props) {
         {cryptoAsset === "USDT" && availableNetworksForAsset.length > 0 && (
           <div className="bg-background border border-border rounded-2xl p-4 space-y-2 animate-in fade-in duration-200">
             <div className="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-wider">
-              <Layers size={14} className="text-accent" />
+              <Coins size={14} className="text-accent" />
               <span>Select Active USDT Network</span>
             </div>
             <div className="grid grid-cols-3 gap-2 pt-1">
