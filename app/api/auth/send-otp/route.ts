@@ -22,8 +22,14 @@ export async function POST(req: Request) {
     const normalizedPhone = phone.startsWith("+") ? phone.substring(1) : phone;
     const withPlus = `+${normalizedPhone}`;
 
-    const { data: users } = await supabase.auth.admin.listUsers();
-    const userExists = users.users.find(u => u.phone === phone || u.phone === normalizedPhone || u.phone === withPlus);
+    const { data: usersData, error: listError } = await supabase.auth.admin.listUsers();
+    
+    if (listError) {
+      console.error("List Users Error:", listError);
+      return NextResponse.json({ error: "Failed to verify phone number. Please try again." }, { status: 500 });
+    }
+
+    const userExists = usersData?.users?.find(u => u.phone === phone || u.phone === normalizedPhone || u.phone === withPlus);
 
     if (mode === "register" && userExists) {
       return NextResponse.json({ error: "Phone number is already registered. Please log in." }, { status: 400 });
