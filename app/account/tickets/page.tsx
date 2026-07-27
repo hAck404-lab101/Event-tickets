@@ -7,21 +7,27 @@ export default async function MyTickets() {
   const { data: { user } } = await supabase.auth.getUser();
   const adminSupabase = getAdminClient();
 
-  // 1. Get user's orders matching customer_id OR customer_email
-  let orderIds: string[] = [];
+  let tickets: any[] = [];
+
   if (user) {
-    const userEmail = user.email?.toLowerCase();
-    const query = userEmail
-      ? adminSupabase.from("orders").select("id").or(`customer_id.eq.${user.id},customer_email.ilike.${userEmail}`)
-      : adminSupabase.from("orders").select("id").eq("customer_id", user.id);
+    const userEmail = user.email?.toLowerCase().trim();
+    const userPhone = user.phone?.replace(/\D/g, "");
 
-    const { data: orders } = await query;
-    orderIds = orders?.map((o) => o.id) || [];
-  }
+    // 1. Build OR filter for matching orders by ID, email, or phone
+    const filterParts: string[] = [`customer_id.eq.${user.id}`];
+    if (userEmail) filterParts.push(`customer_email.ilike.${userEmail}`);
+    if (userPhone) filterParts.push(`customer_phone.cs.${userPhone}`);
 
-  // 2. Get tickets for those orders
-  const { data: ticketsData } = orderIds.length > 0
-    ? await adminSupabase
+    const { data: orders } = await adminSupabase
+      .from("orders")
+      .select("id")
+      .or(filterParts.join(","));
+
+    const orderIds = orders?.map((o) => o.id) || [];
+
+    // 2. Fetch tickets for matched order IDs
+    if (orderIds.length > 0) {
+      const { data: ticketsData } = await adminSupabase
         .from("tickets")
         .select(`
           id, ticket_code, status, attendee_name,
@@ -32,10 +38,11 @@ export default async function MyTickets() {
           order:orders(reference, customer_name)
         `)
         .in("order_id", orderIds)
-        .order("created_at", { ascending: false })
-    : { data: [] };
+        .order("created_at", { ascending: false });
 
-  const tickets = ticketsData || [];
+      tickets = ticketsData || [];
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -91,8 +98,8 @@ export default async function MyTickets() {
       ) : (
         <div className="bg-surface border border-border rounded-2xl p-12 text-center flex flex-col items-center justify-center">
           <Ticket size={48} className="text-muted mb-4 opacity-50" />
-          <h3 className="text-xl font-bold font-serif mb-2">No tickets found</h3>
-          <p className="text-muted mb-6">You don't have any upcoming events.</p>
+          <h3 className="text-xl font-bold font-serif mb-2 text-primary">No tickets found</h3>
+          <p className="text-muted mb-6">You don't have any upcoming event tickets.</p>
           <Link href="/events/explore" className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-colors">
             Find Events
           </Link>

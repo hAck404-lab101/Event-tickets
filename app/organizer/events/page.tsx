@@ -7,28 +7,39 @@ export default async function OrganizerEventsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   const adminSupabase = getAdminClient();
 
-  // First get the organizer record for this user
-  let { data: organizer } = user
-    ? await adminSupabase
-        .from('organizers')
-        .select('id, business_name')
-        .eq('owner_id', user.id)
-        .maybeSingle()
-    : { data: null };
+  let organizer: any = null;
 
-  // If no organizer profile exists yet, auto-create one
-  if (!organizer && user) {
-    const defaultName = user.user_metadata?.business_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'My Organization';
-    const { data: newOrg } = await adminSupabase
+  if (user) {
+    const userEmail = user.email?.toLowerCase().trim();
+    const filterParts: string[] = [`owner_id.eq.${user.id}`];
+    if (userEmail) filterParts.push(`contact_email.ilike.${userEmail}`);
+
+    const { data: orgData } = await adminSupabase
       .from('organizers')
-      .insert({ owner_id: user.id, business_name: defaultName, contact_email: user.email })
-      .select('id, business_name')
+      .select('id, business_name, owner_id')
+      .or(filterParts.join(","))
       .maybeSingle();
-    if (newOrg) organizer = newOrg;
+
+    if (orgData) {
+      organizer = orgData;
+      // Ensure owner_id is synced to current user.id if missing
+      if (orgData.owner_id !== user.id) {
+        await adminSupabase.from('organizers').update({ owner_id: user.id }).eq('id', orgData.id);
+      }
+    } else {
+      // Auto-create organizer profile
+      const defaultName = user.user_metadata?.business_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'My Organization';
+      const { data: newOrg } = await adminSupabase
+        .from('organizers')
+        .insert({ owner_id: user.id, business_name: defaultName, contact_email: user.email })
+        .select('id, business_name, owner_id')
+        .maybeSingle();
+      if (newOrg) organizer = newOrg;
+    }
   }
 
-  // Then fetch events belonging to this organizer
-  const { data: events, error } = organizer
+  // Fetch events belonging to this organizer
+  const { data: events } = organizer
     ? await adminSupabase
         .from('events')
         .select(`
@@ -38,7 +49,7 @@ export default async function OrganizerEventsPage() {
         `)
         .eq('organizer_id', organizer.id)
         .order('created_at', { ascending: false })
-    : { data: [], error: null };
+    : { data: [] };
 
   const hasEvents = events && events.length > 0;
 

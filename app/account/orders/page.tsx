@@ -8,29 +8,24 @@ export default async function MyOrders() {
   const { data: { user } } = await supabase.auth.getUser();
   const adminSupabase = getAdminClient();
 
-  // Fetch real orders associated with the logged-in user by customer_id OR customer_email
   let orders: any[] = [];
   if (user) {
-    const userEmail = user.email?.toLowerCase();
-    const query = userEmail
-      ? adminSupabase
-          .from("orders")
-          .select(`
-            id, reference, total, payment_status, created_at,
-            events(id, title, starts_at)
-          `)
-          .or(`customer_id.eq.${user.id},customer_email.ilike.${userEmail}`)
-          .order("created_at", { ascending: false })
-      : adminSupabase
-          .from("orders")
-          .select(`
-            id, reference, total, payment_status, created_at,
-            events(id, title, starts_at)
-          `)
-          .eq("customer_id", user.id)
-          .order("created_at", { ascending: false });
+    const userEmail = user.email?.toLowerCase().trim();
+    const userPhone = user.phone?.replace(/\D/g, "");
 
-    const { data: ordersData } = await query;
+    const filterParts: string[] = [`customer_id.eq.${user.id}`];
+    if (userEmail) filterParts.push(`customer_email.ilike.${userEmail}`);
+    if (userPhone) filterParts.push(`customer_phone.cs.${userPhone}`);
+
+    const { data: ordersData } = await adminSupabase
+      .from("orders")
+      .select(`
+        id, reference, total, payment_status, created_at,
+        events(id, title, starts_at)
+      `)
+      .or(filterParts.join(","))
+      .order("created_at", { ascending: false });
+
     orders = ordersData || [];
   }
 
@@ -67,7 +62,7 @@ export default async function MyOrders() {
                         <Link href={`/events/${order.events.id}`} className="hover:underline">
                           {order.events.title}
                         </Link>
-                      ) : 'Unknown Event'}
+                      ) : 'Event Ticket'}
                     </td>
                     <td className="px-6 py-4 text-muted">
                       <div className="flex items-center gap-2">
@@ -99,7 +94,7 @@ export default async function MyOrders() {
       ) : (
         <div className="bg-surface border border-border rounded-2xl p-12 text-center flex flex-col items-center justify-center">
           <Receipt size={48} className="text-muted mb-4 opacity-50" />
-          <h3 className="text-xl font-bold font-serif mb-2">No orders found</h3>
+          <h3 className="text-xl font-bold font-serif mb-2 text-primary">No orders found</h3>
           <p className="text-muted mb-6">You haven't made any purchases yet.</p>
           <Link href="/events/explore" className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-colors">
             Find Events
