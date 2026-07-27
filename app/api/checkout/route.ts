@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       console.error("Order Item Insert Error:", itemError);
     }
 
-    // 3. Direct Invoice Call on DoronX API (https://webapi.doronpay.com/smart-invoicing/invoices)
+    // 3. Attempt DoronX Smart Invoice Creation with fallback for trade pair configuration
     const doronxApiKey = process.env.DORONX_API_KEY || "drx_live_de491229fa84aaa33702feeaeb32bca3e2e450b724fc3712d5242b6eec42eacc";
     const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
     const callbackUrl = `${origin}/payment/pending?reference=${reference}`;
@@ -154,7 +154,7 @@ export async function POST(request: Request) {
       console.warn("DoronX invoice API fetch error:", doronxErr);
     }
 
-    // 4. Redirect to DoronX direct invoice checkout link if created, otherwise to /payment/pending
+    // 4. Return payment URL (Direct DoronX URL or Invoice Payment Portal)
     const finalUrl = checkoutUrl || callbackUrl;
 
     return NextResponse.json({
