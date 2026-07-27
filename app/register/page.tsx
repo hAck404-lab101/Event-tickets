@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { ArrowRight, Loader2, KeyRound, Smartphone, User, Lock, Ticket, Mail } from "lucide-react";
+import { ArrowRight, Loader2, Smartphone, User, Lock, Ticket, Mail, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { OtpInput } from "@/components/ui/OtpInput";
@@ -19,12 +19,12 @@ export default function RegisterPage() {
   
   const [step, setStep] = useState<"details" | "otp">("details");
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const router = useRouter();
   const supabase = createClient();
   const [checkingPhone, setCheckingPhone] = useState(false);
 
-  // We still use checkingPhone for UX button disabling, but no inline errors.
   const checkPhoneExists = async () => {
     if (phone.length < 9) return;
     const formattedPhone = formatPhoneNumber(phone);
@@ -37,7 +37,10 @@ export default function RegisterPage() {
       });
       const data = await res.json();
       if (data.exists) {
+        setErrorMessage("Phone number is already registered. Please log in.");
         toast.error("Phone number is already registered. Please log in.");
+      } else {
+        setErrorMessage(null);
       }
     } catch (e) {
       console.error(e);
@@ -55,6 +58,7 @@ export default function RegisterPage() {
 
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    setErrorMessage(null);
     setLoading(true);
     
     const formattedPhone = formatPhoneNumber(phone);
@@ -72,7 +76,9 @@ export default function RegisterPage() {
       setStep("otp");
       toast.success(`Verification code sent to ${phone}`);
     } catch (err: any) {
-      toast.error(err.message || "Failed to send SMS code. Please try again.");
+      const msg = typeof err === "string" ? err : err?.message || "Failed to send SMS code. Please try again.";
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -80,6 +86,13 @@ export default function RegisterPage() {
 
   const handleVerifyAndRegister = async (e?: React.FormEvent, codeToVerify?: string) => {
     if (e) e.preventDefault();
+    const targetOtp = codeToVerify || otp;
+    if (!targetOtp || targetOtp.length < 6) {
+      setErrorMessage("Please enter the complete 6-digit verification code.");
+      return;
+    }
+
+    setErrorMessage(null);
     setLoading(true);
     
     const formattedPhone = formatPhoneNumber(phone);
@@ -89,32 +102,50 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/verify-register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: formattedPhone, email, otp: codeToVerify || otp, password, name, role }),
+        body: JSON.stringify({
+          phone: formattedPhone,
+          email: email.trim(),
+          otp: targetOtp,
+          password,
+          name: name.trim(),
+          role
+        }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Invalid code. Please try again.");
+      if (!res.ok) {
+        throw new Error(data.error || "Registration failed. Please check your details and try again.");
+      }
 
-      // 2. Log in securely with the newly created password
-      const { error, data: sessionData } = await supabase.auth.signInWithPassword({
-        phone: formattedPhone,
+      // 2. Log in securely with email or phone
+      let loginRes = await supabase.auth.signInWithPassword({
+        email: email.trim(),
         password: password,
       });
 
-      if (error) throw error;
-
-      if (sessionData.session) {
-        toast.success("Account created successfully!");
-        if (role === "organizer") {
-           router.push("/organizer/dashboard");
-        } else {
-           router.push("/account");
-        }
-        router.refresh();
+      if (loginRes.error) {
+        loginRes = await supabase.auth.signInWithPassword({
+          phone: formattedPhone,
+          password: password,
+        });
       }
+
+      if (loginRes.error) {
+        throw new Error(loginRes.error.message || "Account created, but auto login failed. Please go to the login page.");
+      }
+
+      toast.success("Account created successfully!");
+      if (role === "organizer") {
+        router.push("/organizer/dashboard");
+      } else {
+        router.push("/account");
+      }
+      router.refresh();
     } catch (err: any) {
       console.error("Verification error:", err);
-      toast.error(err.message || "Invalid code. Please try again.");
+      const msg = typeof err === "string" ? err : err?.message || "Verification failed. Please check your code and try again.";
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -125,7 +156,7 @@ export default function RegisterPage() {
       <Link href="/" className="absolute top-6 left-6 text-2xl font-bold font-serif text-primary">Tixly</Link>
       
       <div className="w-full max-w-md bg-surface p-6 sm:p-8 rounded-3xl border border-border shadow-xl mt-12 sm:mt-0">
-        <div className="mb-8 text-center">
+        <div className="mb-6 text-center">
           <h1 className="text-3xl font-serif font-bold text-primary mb-2">
             {step === "details" ? "Create an account" : "Verify your number"}
           </h1>
@@ -135,6 +166,13 @@ export default function RegisterPage() {
               : `We sent a 6-digit code to ${phone}`}
           </p>
         </div>
+
+        {errorMessage && (
+          <div className="mb-6 p-4 bg-red-900/30 border border-red-800 rounded-2xl flex items-start gap-3 text-red-300 text-sm animate-in fade-in duration-200">
+            <AlertCircle size={18} className="shrink-0 mt-0.5 text-red-400" />
+            <div className="flex-1 font-medium">{errorMessage}</div>
+          </div>
+        )}
 
         {step === "details" ? (
           <form onSubmit={handleSendOtp} className="space-y-5">
@@ -267,7 +305,10 @@ export default function RegisterPage() {
             <div className="text-center mt-4 pt-4 border-t border-border">
               <button 
                 type="button" 
-                onClick={() => setStep("details")}
+                onClick={() => {
+                  setStep("details");
+                  setErrorMessage(null);
+                }}
                 className="text-sm font-bold text-muted hover:text-primary transition-colors"
               >
                 Go back
