@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { LoaderCircle, Minus, Plus } from "lucide-react";
+import { LoaderCircle, Minus, Plus, Smartphone, Coins } from "lucide-react";
 import type { Event } from "@/lib/events";
 import { formatGhs } from "@/lib/events";
 
@@ -10,6 +10,7 @@ type Props = { event: Event };
 export default function TicketCheckout({ event }: Props) {
   const [ticketId, setTicketId] = useState(event.ticketTypes[0].id);
   const [quantity, setQuantity] = useState(1);
+  const [paymentMethod, setPaymentMethod] = useState<"momo" | "crypto">("momo");
   const [customer, setCustomer] = useState({ name: "", email: "", phone: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -35,6 +36,7 @@ export default function TicketCheckout({ event }: Props) {
           ticketName: ticket.name,
           quantity,
           unitPrice: ticket.price,
+          paymentMethod,
           customerEmail: customer.email,
           customerPhone: customer.phone,
           customerName: customer.name
@@ -106,6 +108,35 @@ export default function TicketCheckout({ event }: Props) {
         </div>
       </div>
 
+      {/* Payment Method Selector */}
+      <div className="mb-8">
+        <label className="block text-sm font-bold text-primary mb-3">Payment Method</label>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setPaymentMethod("momo")}
+            className={`p-3.5 rounded-xl border flex items-center justify-center gap-2.5 font-bold text-sm transition-all ${
+              paymentMethod === "momo"
+                ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
+                : "border-border bg-background text-muted hover:border-primary/40"
+            }`}
+          >
+            <Smartphone size={18} /> Mobile Money
+          </button>
+          <button
+            type="button"
+            onClick={() => setPaymentMethod("crypto")}
+            className={`p-3.5 rounded-xl border flex items-center justify-center gap-2.5 font-bold text-sm transition-all ${
+              paymentMethod === "crypto"
+                ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
+                : "border-border bg-background text-muted hover:border-primary/40"
+            }`}
+          >
+            <Coins size={18} /> Crypto (DoronX)
+          </button>
+        </div>
+      </div>
+
       <div className="space-y-4 mb-8">
         <div>
           <label className="block text-sm font-bold text-primary mb-2">Full name</label>
@@ -164,11 +195,11 @@ export default function TicketCheckout({ event }: Props) {
         {loading ? (
           <><LoaderCircle className="animate-spin" size={20} /> Processing...</>
         ) : (
-          `Pay ${formatGhs(total)}`
+          `Pay ${formatGhs(total)} via ${paymentMethod === 'crypto' ? 'Crypto' : 'Mobile Money'}`
         )}
       </button>
       <p className="text-center text-muted text-xs font-medium mt-4">
-        You will be redirected to the secure DoronX invoice checkout page.
+        You will be redirected to the secure DoronX invoice checkout page ({paymentMethod === 'crypto' ? 'Crypto USDT / BTC' : 'MoMo / Card'}).
       </p>
     </form>
   );

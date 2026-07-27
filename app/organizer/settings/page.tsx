@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Coins, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 
 const regions = [
@@ -33,6 +33,17 @@ export default function OrganizerSettingsPage() {
   const [region, setRegion] = useState("");
   const [city, setCity] = useState("");
   const [streetAddress, setStreetAddress] = useState("");
+
+  // Tab 3: Payout (DoronX)
+  const [payoutMethod, setPayoutMethod] = useState("Mobile Money");
+  const [momoNetwork, setMomoNetwork] = useState("MTN");
+  const [momoNumber, setMomoNumber] = useState("");
+  const [momoName, setMomoName] = useState("");
+
+  // Crypto options
+  const [cryptoCurrency, setCryptoCurrency] = useState("USDT");
+  const [cryptoNetwork, setCryptoNetwork] = useState("TRC-20");
+  const [cryptoWallet, setCryptoWallet] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -66,6 +77,15 @@ export default function OrganizerSettingsPage() {
           setRegion(data.region || "");
           setCity(data.city || "");
           setStreetAddress(data.street_address || "");
+
+          setPayoutMethod(data.payout_method || "Mobile Money");
+          setMomoNetwork(data.momo_network || "MTN");
+          setMomoNumber(data.momo_number || "");
+          setMomoName(data.momo_name || "");
+
+          setCryptoCurrency(data.crypto_currency || "USDT");
+          setCryptoNetwork(data.crypto_network || "TRC-20");
+          setCryptoWallet(data.crypto_wallet || "");
         } else {
           setContactEmail(user.email || "");
           setBusinessName(user.user_metadata?.business_name || user.user_metadata?.full_name || "");
@@ -98,6 +118,13 @@ export default function OrganizerSettingsPage() {
         region,
         city,
         street_address: streetAddress,
+        payout_method: payoutMethod,
+        momo_network: momoNetwork,
+        momo_number: momoNumber,
+        momo_name: momoName,
+        crypto_currency: cryptoCurrency,
+        crypto_network: cryptoNetwork,
+        crypto_wallet: cryptoWallet,
         ...partialPayload,
       };
 
@@ -154,6 +181,22 @@ export default function OrganizerSettingsPage() {
     );
   };
 
+  const handleSavePayout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await saveSettingsToDb(
+      {
+        payout_method: payoutMethod,
+        momo_network: momoNetwork,
+        momo_number: momoNumber,
+        momo_name: momoName,
+        crypto_currency: cryptoCurrency,
+        crypto_network: cryptoNetwork,
+        crypto_wallet: cryptoWallet,
+      },
+      "Payout settings saved successfully"
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -166,7 +209,7 @@ export default function OrganizerSettingsPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-serif font-bold text-primary">Settings</h1>
-        <p className="text-muted mt-1">Manage your organizer profile and location preferences.</p>
+        <p className="text-muted mt-1">Manage your organizer profile, location, and DoronX payout preferences.</p>
       </div>
 
       <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
@@ -182,6 +225,12 @@ export default function OrganizerSettingsPage() {
             className={`px-6 py-4 font-bold text-sm whitespace-nowrap ${activeTab === 'location' ? 'text-primary border-b-2 border-primary' : 'text-muted hover:text-primary'}`}
           >
             Location
+          </button>
+          <button 
+            onClick={() => setActiveTab('payout')}
+            className={`px-6 py-4 font-bold text-sm whitespace-nowrap ${activeTab === 'payout' ? 'text-primary border-b-2 border-primary' : 'text-muted hover:text-primary'}`}
+          >
+            Payout (DoronX)
           </button>
         </div>
 
@@ -325,6 +374,140 @@ export default function OrganizerSettingsPage() {
                 >
                   {saving && <Loader2 size={16} className="animate-spin" />}
                   {saving ? "Saving..." : "Save Location"}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {activeTab === 'payout' && (
+            <form onSubmit={handleSavePayout} className="max-w-2xl space-y-6 animate-in fade-in duration-200">
+              <div className="space-y-2">
+                <label className="text-sm font-bold block text-primary">Preferred DoronX Payout Method</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setPayoutMethod("Mobile Money")}
+                    className={`p-4 rounded-xl border flex items-center gap-3 font-bold transition-all ${
+                      payoutMethod === "Mobile Money"
+                        ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
+                        : "border-border bg-background text-muted hover:border-primary/40"
+                    }`}
+                  >
+                    <Smartphone size={20} /> Mobile Money
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPayoutMethod("Crypto")}
+                    className={`p-4 rounded-xl border flex items-center gap-3 font-bold transition-all ${
+                      payoutMethod === "Crypto"
+                        ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
+                        : "border-border bg-background text-muted hover:border-primary/40"
+                    }`}
+                  >
+                    <Coins size={20} /> Crypto (USDT / USDC)
+                  </button>
+                </div>
+              </div>
+              
+              {payoutMethod === 'Mobile Money' && (
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold block text-primary">Mobile Money Network</label>
+                    <select 
+                      value={momoNetwork}
+                      onChange={(e) => setMomoNetwork(e.target.value)}
+                      className="w-full bg-background border border-border rounded-xl px-4 py-3 outline-none focus:border-primary text-primary appearance-none"
+                    >
+                      <option value="MTN">MTN Mobile Money</option>
+                      <option value="Telecel">Telecel Cash</option>
+                      <option value="AirtelTigo">AirtelTigo Money</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold block text-primary">Mobile Money Number</label>
+                    <input 
+                      type="tel" 
+                      required={payoutMethod === 'Mobile Money'}
+                      value={momoNumber}
+                      onChange={(e) => setMomoNumber(e.target.value)}
+                      placeholder="e.g. 024 000 0000"
+                      className="w-full bg-background border border-border rounded-xl px-4 py-3 outline-none focus:border-primary text-primary" 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold block text-primary">Account Name</label>
+                    <input 
+                      type="text" 
+                      required={payoutMethod === 'Mobile Money'}
+                      value={momoName}
+                      onChange={(e) => setMomoName(e.target.value)}
+                      placeholder="Name registered on the network"
+                      className="w-full bg-background border border-border rounded-xl px-4 py-3 outline-none focus:border-primary text-primary" 
+                    />
+                  </div>
+                </div>
+              )}
+
+              {payoutMethod === 'Crypto' && (
+                <div className="space-y-4 pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold block text-primary">Cryptocurrency</label>
+                      <select 
+                        value={cryptoCurrency}
+                        onChange={(e) => setCryptoCurrency(e.target.value)}
+                        className="w-full bg-background border border-border rounded-xl px-4 py-3 outline-none focus:border-primary text-primary appearance-none"
+                      >
+                        <option value="USDT">USDT (Tether)</option>
+                        <option value="USDC">USDC (USD Coin)</option>
+                        <option value="BTC">Bitcoin (BTC)</option>
+                        <option value="ETH">Ethereum (ETH)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold block text-primary">Network / Blockchain</label>
+                      <select 
+                        value={cryptoNetwork}
+                        onChange={(e) => setCryptoNetwork(e.target.value)}
+                        className="w-full bg-background border border-border rounded-xl px-4 py-3 outline-none focus:border-primary text-primary appearance-none"
+                      >
+                        <option value="TRC-20">TRON (TRC-20)</option>
+                        <option value="ERC-20">Ethereum (ERC-20)</option>
+                        <option value="Solana">Solana (SOL)</option>
+                        <option value="Polygon">Polygon (MATIC)</option>
+                        <option value="BEP-20">BNB Chain (BEP-20)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold block text-primary">Crypto Wallet Address *</label>
+                    <input 
+                      type="text" 
+                      required={payoutMethod === 'Crypto'}
+                      value={cryptoWallet}
+                      onChange={(e) => setCryptoWallet(e.target.value)}
+                      placeholder="e.g. T..." 
+                      className="w-full bg-background border border-border rounded-xl px-4 py-3 outline-none focus:border-primary text-primary font-mono text-sm" 
+                    />
+                    <p className="text-xs text-muted">
+                      DoronX will process payout settlements directly to this wallet address. Ensure the network matches your wallet address.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-6 border-t border-border">
+                <button 
+                  type="submit" 
+                  disabled={saving}
+                  className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-70"
+                >
+                  {saving && <Loader2 size={16} className="animate-spin" />}
+                  {saving ? "Saving..." : "Save Payout Settings"}
                 </button>
               </div>
             </form>
