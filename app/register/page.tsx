@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowRight, Loader2, KeyRound, Smartphone, User, Lock, Ticket } from "lucide-react";
@@ -20,6 +20,52 @@ export default function RegisterPage() {
   
   const router = useRouter();
   const supabase = createClient();
+  const [checkingPhone, setCheckingPhone] = useState(false);
+
+  useEffect(() => {
+    const checkPhoneExists = async () => {
+      if (phone.length < 9) {
+        if (error === "Phone number is already registered. Please log in.") {
+          setError(null);
+        }
+        return;
+      }
+      
+      let formattedPhone = phone.trim();
+      if (formattedPhone.startsWith("0") && formattedPhone.length === 10) {
+        formattedPhone = `+233${formattedPhone.substring(1)}`;
+      } else if (!formattedPhone.startsWith("+")) {
+        formattedPhone = `+${formattedPhone}`;
+      }
+
+      setCheckingPhone(true);
+      try {
+        const res = await fetch("/api/auth/check-phone", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: formattedPhone }),
+        });
+        const data = await res.json();
+        if (data.exists) {
+          setError("Phone number is already registered. Please log in.");
+        } else {
+          if (error === "Phone number is already registered. Please log in.") {
+            setError(null);
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setCheckingPhone(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      checkPhoneExists();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [phone]);
 
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -213,7 +259,7 @@ export default function RegisterPage() {
             
             <button
               type="submit"
-              disabled={loading || !phone || !password || !name}
+              disabled={loading || checkingPhone || !phone || !password || !name || error === "Phone number is already registered. Please log in."}
               className={`w-full text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed group mt-4 ${role === 'organizer' ? 'bg-accent hover:bg-opacity-90' : 'bg-primary hover:bg-opacity-90'}`}
             >
               {loading ? (
