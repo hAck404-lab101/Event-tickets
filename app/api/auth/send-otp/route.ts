@@ -18,8 +18,12 @@ export async function POST(req: Request) {
     const supabase = createServerClient();
 
     // 1. Check if user exists before sending OTP
+    // Normalize phone (strip +)
+    const normalizedPhone = phone.startsWith("+") ? phone.substring(1) : phone;
+    const withPlus = `+${normalizedPhone}`;
+
     const { data: users } = await supabase.auth.admin.listUsers();
-    const userExists = users.users.find(u => u.phone === phone);
+    const userExists = users.users.find(u => u.phone === phone || u.phone === normalizedPhone || u.phone === withPlus);
 
     if (mode === "register" && userExists) {
       return NextResponse.json({ error: "Phone number is already registered. Please log in." }, { status: 400 });
