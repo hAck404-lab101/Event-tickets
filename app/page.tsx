@@ -83,22 +83,34 @@ export default async function HomePage() {
         </div>
 
         <div className="flex-1 relative w-full max-w-lg lg:max-w-none hidden sm:block">
-          <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden relative shadow-2xl">
-            <img 
-              src="/images/hero-concert.jpg" 
-              alt="Live concert"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-            
-            <div className="absolute bottom-0 left-0 right-0 p-8">
-              <div className="bg-surface-glass backdrop-blur-md border border-border p-6 rounded-2xl text-foreground">
-                <span className="bg-accent text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide mb-4 inline-block">Featured</span>
-                <h3 className="text-2xl font-bold font-serif mb-1">Accra Night Live</h3>
-                <p className="text-white/80 font-medium flex items-center gap-2"><MapPin size={16}/> Untamed Empire, Accra</p>
+          {events?.length > 0 ? (
+            <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden relative shadow-2xl">
+              <img 
+                src="/images/hero-concert.jpg" 
+                alt="Live concert"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+              
+              <div className="absolute bottom-0 left-0 right-0 p-8">
+                <div className="bg-surface-glass backdrop-blur-md border border-border p-6 rounded-2xl text-foreground">
+                  <span className="bg-accent text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide mb-4 inline-block">Featured</span>
+                  <h3 className="text-2xl font-bold font-serif mb-1">Accra Night Live</h3>
+                  <p className="text-white/80 font-medium flex items-center gap-2"><MapPin size={16}/> Untamed Empire, Accra</p>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden relative shadow-2xl bg-surface border border-border flex items-center justify-center">
+               <div className="text-center p-8">
+                  <div className="w-16 h-16 bg-surface-elevated rounded-full flex items-center justify-center mx-auto mb-4 text-primary">
+                    <Ticket size={24} />
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground mb-2">Experiences Await</h3>
+                  <p className="text-muted text-sm">Amazing events will appear here soon.</p>
+               </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -128,47 +140,60 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {events?.map((event: any) => {
-              const prices = event.ticketTypes?.map((t: any) => t.price) || [];
-              const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-              const formattedDate = `${event.date} · ${event.time}`;
-              
-              return (
-              <Link href={`/events/${event.id}`} key={event.id} className="group block">
-                <div className="bg-background rounded-3xl overflow-hidden border border-border hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
-                  <div className="h-64 relative overflow-hidden">
-                    <img 
-                      src={event.image} 
-                      alt={event.title} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    />
-                    <div className="absolute top-4 left-4 bg-surface-glass backdrop-blur-sm text-primary px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide">
-                      {event.category}
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    <p className="text-accent font-bold text-sm mb-2 flex items-center gap-2">
-                      <CalendarDays size={16} /> {formattedDate}
-                    </p>
-                    <h3 className="text-xl font-bold font-serif text-primary mb-3 group-hover:text-accent transition-colors">{event.title}</h3>
-                    <p className="text-muted text-sm font-medium flex items-center gap-2 mb-6">
-                      <MapPin size={16} /> {event.city}
-                    </p>
-                    <div className="flex items-center justify-between pt-4 border-t border-border">
-                      <div>
-                        <p className="text-xs text-muted font-bold uppercase">From</p>
-                        <p className="font-bold text-lg text-primary">₵ {minPrice.toFixed(2)}</p>
-                      </div>
-                      <div className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                        <ArrowRight size={18} />
+          {events?.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {events.map((event: any) => {
+                const prices = event.ticketTypes?.map((t: any) => t.price) || [];
+                const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+                const formattedDate = `${event.date} · ${event.time}`;
+                
+                return (
+                <Link href={`/events/${event.id}`} key={event.id} className="group block">
+                  <div className="bg-background rounded-3xl overflow-hidden border border-border hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
+                    <div className="h-64 relative overflow-hidden">
+                      <img 
+                        src={event.image} 
+                        alt={event.title} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                      <div className="absolute top-4 left-4 bg-surface-glass backdrop-blur-sm text-primary px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide">
+                        {event.category}
                       </div>
                     </div>
+                    <div className="p-6">
+                      <p className="text-accent font-bold text-sm mb-2 flex items-center gap-2">
+                        <CalendarDays size={16} /> {formattedDate}
+                      </p>
+                      <h3 className="text-xl font-bold font-serif text-primary mb-3 group-hover:text-accent transition-colors">{event.title}</h3>
+                      <p className="text-muted text-sm font-medium flex items-center gap-2 mb-6">
+                        <MapPin size={16} /> {event.city}
+                      </p>
+                      <div className="flex items-center justify-between pt-4 border-t border-border">
+                        <div>
+                          <p className="text-xs text-muted font-bold uppercase">From</p>
+                          <p className="font-bold text-lg text-primary">₵ {minPrice.toFixed(2)}</p>
+                        </div>
+                        <div className="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                          <ArrowRight size={18} />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </Link>
+              )})}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 bg-background rounded-3xl border border-border">
+              <div className="w-20 h-20 bg-surface rounded-full flex items-center justify-center mb-6 text-primary">
+                <CalendarDays size={32} />
+              </div>
+              <h3 className="text-2xl font-bold font-serif text-primary mb-2">No Events Yet</h3>
+              <p className="text-muted mb-8 max-w-md text-center">We're curating some amazing experiences. Check back soon for the best events in your area.</p>
+              <Link href="/events/explore" className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-all">
+                Be the first to discover events
               </Link>
-            )})}
-          </div>
+            </div>
+          )}
         </div>
       </section>
 

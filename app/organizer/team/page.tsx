@@ -1,6 +1,17 @@
-import { Users, UserPlus } from "lucide-react";
+import { createServerClient } from "@/lib/supabase/server";
+import { Users } from "lucide-react";
+import InviteClient from "./InviteClient";
 
 export default async function OrganizerTeamPage() {
+  const supabase = createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let profile = null;
+  if (user) {
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    profile = data;
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -8,27 +19,34 @@ export default async function OrganizerTeamPage() {
           <h1 className="text-3xl font-serif font-bold text-primary">Team Management</h1>
           <p className="text-muted mt-1">Manage who has access to your organizer account.</p>
         </div>
-        <button className="bg-primary text-white px-5 py-2.5 rounded-lg font-bold text-sm hover:bg-opacity-90 transition-colors flex items-center gap-2">
-          <UserPlus size={18} /> Invite Member
-        </button>
+        <InviteClient />
       </div>
 
       <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
         <div className="divide-y divide-border">
-          <div className="p-6 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center font-bold text-lg">
-                Y
+          {profile && (
+            <div className="p-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-accent text-primary-foreground rounded-full flex items-center justify-center font-bold text-lg uppercase">
+                  {profile.first_name?.[0] || profile.email?.[0] || 'U'}
+                </div>
+                <div>
+                  <h3 className="font-bold text-primary">{profile.first_name} {profile.last_name} (You)</h3>
+                  <p className="text-sm text-muted">{profile.email}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold">You (Owner)</h3>
-                <p className="text-sm text-muted">owner@example.com</p>
-              </div>
+              <span className="bg-green-900/30 text-green-400 border border-green-800 text-xs font-bold px-3 py-1 rounded-full uppercase">
+                Owner
+              </span>
             </div>
-            <span className="bg-green-100 text-green-800 text-xs font-bold px-3 py-1 rounded-full uppercase">
-              Admin
-            </span>
-          </div>
+          )}
+        </div>
+        
+        <div className="border-t border-border p-12 text-center">
+           <Users size={48} className="mx-auto text-muted mb-4 opacity-50" />
+           <h3 className="text-xl font-bold font-serif mb-2 text-primary">No other team members</h3>
+           <p className="text-muted mb-6 max-w-sm mx-auto">Invite team members to help manage your events, scan tickets, and view analytics.</p>
+           <InviteClient isButton />
         </div>
       </div>
     </div>

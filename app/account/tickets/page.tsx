@@ -6,30 +6,29 @@ export default async function MyTickets() {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Fetch real tickets associated with the logged-in user
-  const { data: ticketsData } = await supabase
-    .from('tickets')
-    .select(`
-      id,
-      ticket_code,
-      status,
-      order:orders!inner (
-        customer_id
-      ),
-      ticket_type:ticket_types!inner (
-        name,
-        event:events!inner (
-          id,
-          title,
-          starts_at,
-          location,
-          image_url,
-          banner_url
-        )
-      )
-    `)
-    .eq('orders.customer_id', user?.id)
-    .order('created_at', { ascending: false });
+  // 1. Get user's orders
+  const { data: orders } = await supabase
+    .from('orders')
+    .select('id')
+    .eq('customer_id', user?.id);
+    
+  const orderIds = orders?.map(o => o.id) || [];
+
+  // 2. Get tickets for those orders
+  const { data: ticketsData } = orderIds.length > 0 
+    ? await supabase
+        .from('tickets')
+        .select(`
+          id, ticket_code, status, attendee_name,
+          ticket_type:ticket_types(
+            name, price,
+            event:events(id, title, starts_at, city, banner_url)
+          ),
+          order:orders(reference, customer_name)
+        `)
+        .in('order_id', orderIds)
+        .order('created_at', { ascending: false })
+    : { data: [] };
 
   const tickets = ticketsData || [];
 
@@ -51,19 +50,23 @@ export default async function MyTickets() {
             return (
               <Link key={t.id} href={`/events/${eventId}/tickets/${t.id}`} className="bg-surface border border-border rounded-2xl overflow-hidden hover:border-primary transition-colors flex flex-col sm:flex-row shadow-sm group">
                 <div className="h-48 sm:h-auto sm:w-1/3 bg-background relative overflow-hidden">
-                  <img src={event?.image_url || event?.banner_url || "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80"} alt={event?.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <img src={event?.banner_url || "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80"} alt={event?.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 </div>
                 <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>
-                    <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase mb-2 inline-block ${t.status === 'valid' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase mb-2 inline-block ${
+                      t.status === 'valid' ? 'bg-green-500/20 text-green-500' : 
+                      t.status === 'checked_in' ? 'bg-blue-500/20 text-blue-500' :
+                      'bg-error-bg text-error'
+                    }`}>
                       {t.status}
                     </span>
                     <h3 className="font-bold font-serif text-lg leading-tight mb-2 group-hover:text-primary transition-colors">{event?.title}</h3>
                     <p className="text-muted text-sm flex items-center gap-1.5 mb-1">
-                      <CalendarDays size={14} /> {new Date(event?.starts_at).toLocaleDateString()}
+                      <CalendarDays size={14} /> {event?.starts_at ? new Date(event.starts_at).toLocaleDateString() : 'TBA'}
                     </p>
                     <p className="text-muted text-sm flex items-center gap-1.5 mb-4">
-                      <MapPin size={14} /> {event?.location?.split(',')[0]}
+                      <MapPin size={14} /> {event?.city || 'TBA'}
                     </p>
                   </div>
                   <div className="pt-3 border-t border-border flex justify-between items-center">
@@ -85,7 +88,7 @@ export default async function MyTickets() {
           <Ticket size={48} className="text-muted mb-4 opacity-50" />
           <h3 className="text-xl font-bold font-serif mb-2">No tickets found</h3>
           <p className="text-muted mb-6">You don't have any upcoming events.</p>
-          <Link href="/events/explore" className="bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-colors">
+          <Link href="/events" className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-colors">
             Find Events
           </Link>
         </div>

@@ -1,6 +1,39 @@
-import { Ticket, Search } from "lucide-react";
+import { createServerClient } from "@/lib/supabase/server";
+import OrdersClient from "./OrdersClient";
 
 export default async function OrganizerOrdersPage() {
+  const supabase = createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let orders: any[] = [];
+
+  if (user) {
+    const { data: organizer } = await supabase
+      .from('organizers')
+      .select('id')
+      .eq('owner_id', user.id)
+      .single();
+
+    if (organizer) {
+      const { data: eventIds } = await supabase
+        .from('events')
+        .select('id')
+        .eq('organizer_id', organizer.id);
+        
+      const ids = eventIds?.map(e => e.id) || [];
+      
+      if (ids.length > 0) {
+        const { data: ordersData } = await supabase
+          .from('orders')
+          .select('*, events(title), order_items(quantity, unit_price, ticket_types(name))')
+          .in('event_id', ids)
+          .order('created_at', { ascending: false });
+          
+        if (ordersData) orders = ordersData;
+      }
+    }
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -9,25 +42,7 @@ export default async function OrganizerOrdersPage() {
       </div>
 
       <div className="bg-surface rounded-2xl border border-border shadow-sm p-6">
-        <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
-          <div className="relative max-w-md w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={20} />
-            <input 
-              type="text" 
-              placeholder="Search by order ID, email, or name..." 
-              className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-            />
-          </div>
-          <button className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-bold hover:bg-primary hover:text-white transition-colors">
-            Export CSV
-          </button>
-        </div>
-
-        <div className="border border-border rounded-xl overflow-hidden text-center py-16">
-          <Ticket size={48} className="mx-auto text-muted mb-4 opacity-50" />
-          <h3 className="text-xl font-bold font-serif mb-2">No orders found</h3>
-          <p className="text-muted">Once attendees start buying tickets, their orders will appear here.</p>
-        </div>
+        <OrdersClient orders={orders} />
       </div>
     </div>
   );

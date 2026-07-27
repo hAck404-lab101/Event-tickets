@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
-import { CalendarDays, Clock3, MapPin, Ticket as TicketIcon, CheckCircle2, QrCode } from "lucide-react";
+import { CalendarDays, Clock3, MapPin, Ticket as TicketIcon, CheckCircle2, Download, CalendarPlus } from "lucide-react";
 import Link from "next/link";
 import { formatGhs } from "@/lib/events";
+import DownloadTicketButton from "./DownloadTicketButton";
 
 export default async function TicketConfirmationPage({ params }: { params: Promise<{ id: string; ticketId: string }> }) {
   const { id: eventId, ticketId } = await params;
@@ -29,8 +30,6 @@ export default async function TicketConfirmationPage({ params }: { params: Promi
     notFound();
   }
 
-  // We should also fetch the event from the DB, but currently events are hardcoded in lib/events
-  // So we will import getEventById
   const { getEventById } = await import("@/lib/events");
   const event = await getEventById(eventId);
   
@@ -38,13 +37,12 @@ export default async function TicketConfirmationPage({ params }: { params: Promi
     notFound();
   }
 
-  // We need to generate a real QR code or a placeholder that looks real
-  // Using an image API to generate the QR Code for the ticket's qr_payload
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(ticket.qr_payload)}`;
+  const qrData = ticket.qr_payload || ticket.ticket_code || "INVALID_QR";
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
 
   return (
-    <main className="min-h-screen bg-background pb-24">
-      <nav className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-50">
+    <main className="min-h-screen bg-background pb-24 printable-area">
+      <nav className="border-b border-border bg-background/95 backdrop-blur-sm sticky top-0 z-50 hide-on-print">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-primary group">
             <div className="bg-primary text-primary-foreground p-2 rounded-xl group-hover:bg-primary-hover transition-colors">
@@ -52,15 +50,25 @@ export default async function TicketConfirmationPage({ params }: { params: Promi
             </div>
             <span className="text-2xl font-serif font-bold tracking-tight">Tixly</span>
           </Link>
-          <Link href="/account" className="text-sm font-bold text-muted hover:text-primary transition-colors">
+          <Link href="/account/tickets" className="text-sm font-bold text-muted hover:text-primary transition-colors">
             My Tickets
           </Link>
         </div>
       </nav>
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-12">
-        <div className="bg-surface rounded-[2rem] border border-border overflow-hidden shadow-2xl">
-          <div className="bg-green-500/10 p-8 text-center border-b border-border">
+        
+        <div className="mb-6 flex justify-end gap-3 hide-on-print">
+          <DownloadTicketButton 
+            eventTitle={event.title} 
+            eventDate={event.date}
+            eventTime={event.time}
+            eventLocation={event.city}
+          />
+        </div>
+
+        <div className="bg-surface rounded-[2rem] border border-border overflow-hidden shadow-2xl ticket-content">
+          <div className="bg-green-500/10 p-8 text-center border-b border-border hide-on-print">
             <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 text-white">
               <CheckCircle2 size={32} />
             </div>
@@ -95,7 +103,7 @@ export default async function TicketConfirmationPage({ params }: { params: Promi
                     <div className="p-2 bg-background rounded-lg border border-border text-primary"><MapPin size={20} /></div>
                     <div>
                       <p className="text-xs text-muted font-bold uppercase">Location</p>
-                      <p className="font-bold text-primary">{event.venue}, {event.city}</p>
+                      <p className="font-bold text-primary">{event.city}</p>
                     </div>
                   </div>
                 </div>
@@ -132,6 +140,29 @@ export default async function TicketConfirmationPage({ params }: { params: Promi
           </div>
         </div>
       </div>
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .printable-area, .printable-area * {
+            visibility: visible;
+          }
+          .printable-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          .hide-on-print {
+            display: none !important;
+          }
+          .ticket-content {
+            box-shadow: none !important;
+            border: 2px solid #ddd !important;
+          }
+        }
+      `}} />
     </main>
   );
 }

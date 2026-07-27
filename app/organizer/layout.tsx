@@ -20,6 +20,7 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   
   const supabase = createBrowserClient(
@@ -48,13 +49,14 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isProfileMenuOpen) {
-        setIsProfileMenuOpen(false);
+      if (e.key === 'Escape') {
+        if (isProfileMenuOpen) setIsProfileMenuOpen(false);
+        if (isNotificationsOpen) setIsNotificationsOpen(false);
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isProfileMenuOpen]);
+  }, [isProfileMenuOpen, isNotificationsOpen]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -122,13 +124,45 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="relative p-2 text-muted hover:text-primary transition-colors">
-              <Bell size={20} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-surface"></span>
-            </button>
             <div className="relative">
               <button 
-                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                onClick={() => {
+                  setIsNotificationsOpen(!isNotificationsOpen);
+                  setIsProfileMenuOpen(false);
+                }}
+                className="relative p-2 text-muted hover:text-primary transition-colors"
+              >
+                <Bell size={20} />
+              </button>
+              
+              {isNotificationsOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setIsNotificationsOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-80 bg-surface border border-border rounded-xl shadow-lg py-2 z-50">
+                    <div className="px-4 py-3 border-b border-border flex justify-between items-center">
+                      <h3 className="font-bold text-foreground">Notifications</h3>
+                    </div>
+                    <div className="p-8 text-center flex flex-col items-center justify-center text-muted">
+                      <div className="w-12 h-12 rounded-full bg-surface-elevated border border-border flex items-center justify-center mb-3">
+                        <Bell size={20} className="text-primary/50" />
+                      </div>
+                      <p className="text-sm font-medium text-foreground">No notifications yet</p>
+                      <p className="text-xs mt-1">We'll let you know when something happens.</p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  setIsProfileMenuOpen(!isProfileMenuOpen);
+                  setIsNotificationsOpen(false);
+                }}
                 className="w-10 h-10 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-sm hover:ring-2 hover:ring-primary/40 transition-all uppercase"
               >
                 {userProfile?.first_name?.[0] || "O"}

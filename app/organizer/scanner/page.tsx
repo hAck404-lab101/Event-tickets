@@ -32,9 +32,11 @@ export default function TicketScanner() {
         setTicketData(data);
         if (data.status === 'valid') {
           setScanResult('valid');
-          // In a real scenario, we'd also mark it as 'used' here:
-          // await supabase.from('tickets').update({ status: 'used' }).eq('id', data.id);
-        } else if (data.status === 'used') {
+          const { error: updateError } = await supabase.from('tickets').update({ status: 'checked_in' }).eq('id', data.id);
+          if (updateError) {
+            await supabase.from('tickets').update({ status: 'used' }).eq('id', data.id);
+          }
+        } else if (data.status === 'used' || data.status === 'checked_in') {
           setScanResult('used');
         } else {
           setScanResult('invalid');
@@ -52,19 +54,6 @@ export default function TicketScanner() {
     }
   };
 
-  const handleSimulateScan = (type: 'valid' | 'invalid' | 'used') => {
-    setScanResult(type);
-    if (type !== 'invalid') {
-      setTicketData({
-        ticket_types: { name: 'VIP Pass' },
-        order: { customer_name: 'Test User', reference: 'ORD-TEST' }
-      });
-    }
-    setTimeout(() => {
-      setScanResult('idle');
-      setTicketData(null);
-    }, 5000);
-  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 h-full flex flex-col">
@@ -164,13 +153,6 @@ export default function TicketScanner() {
             <p className="text-red-800 text-sm font-medium">This ticket does not exist or was cancelled.</p>
           </div>
         )}
-      </div>
-      
-      {/* Simulation Controls for Demo Purposes */}
-      <div className="flex justify-center gap-4 py-4 border-t border-border mt-auto">
-        <button onClick={() => handleSimulateScan('valid')} className="text-xs px-3 py-1 bg-green-100 text-green-800 font-bold rounded">Simulate Valid</button>
-        <button onClick={() => handleSimulateScan('used')} className="text-xs px-3 py-1 bg-yellow-100 text-yellow-800 font-bold rounded">Simulate Used</button>
-        <button onClick={() => handleSimulateScan('invalid')} className="text-xs px-3 py-1 bg-red-100 text-red-800 font-bold rounded">Simulate Invalid</button>
       </div>
     </div>
   );
