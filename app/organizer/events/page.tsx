@@ -6,12 +6,25 @@ export default async function OrganizerEventsPage() {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // First get the organizer record for this user
-  const { data: organizer } = await supabase
-    .from('organizers')
-    .select('id')
-    .eq('owner_id', user?.id)
-    .single();
+  // First get the organizer record for this user using maybeSingle()
+  let { data: organizer } = user
+    ? await supabase
+        .from('organizers')
+        .select('id, business_name')
+        .eq('owner_id', user.id)
+        .maybeSingle()
+    : { data: null };
+
+  // If no organizer profile exists yet, auto-create one
+  if (!organizer && user) {
+    const defaultName = user.user_metadata?.business_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'My Organization';
+    const { data: newOrg } = await supabase
+      .from('organizers')
+      .insert({ owner_id: user.id, business_name: defaultName, contact_email: user.email })
+      .select('id, business_name')
+      .maybeSingle();
+    if (newOrg) organizer = newOrg;
+  }
 
   // Then fetch events belonging to this organizer
   const { data: events, error } = organizer
@@ -111,25 +124,14 @@ export default async function OrganizerEventsPage() {
             </div>
             <h3 className="text-2xl font-bold font-serif mb-3 text-primary">No events yet</h3>
             <p className="text-muted mb-8 max-w-sm">
-              {!organizer
-                ? "Complete your organizer profile in Settings before creating events."
-                : "Create your first event and start selling tickets to your audience!"}
+              Create your first event and start selling tickets to your audience!
             </p>
-            {organizer ? (
-              <Link
-                href="/organizer/events/create"
-                className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-colors flex items-center gap-2"
-              >
-                <Plus size={18} /> Create Your First Event
-              </Link>
-            ) : (
-              <Link
-                href="/organizer/settings"
-                className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-colors"
-              >
-                Complete Profile
-              </Link>
-            )}
+            <Link
+              href="/organizer/events/create"
+              className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-colors flex items-center gap-2"
+            >
+              <Plus size={18} /> Create Your First Event
+            </Link>
           </div>
         )}
       </div>

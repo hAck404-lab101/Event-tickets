@@ -25,19 +25,16 @@ export default function EventCreateWizard() {
         return;
       }
 
-      // Check organizer profile
+      // Check organizer profile using maybeSingle
       const { data: orgData } = await supabase
         .from("organizers")
         .select("id")
         .eq("owner_id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (!orgData) {
-        alert("Please complete your organizer profile first.");
-        router.push("/organizer/settings");
-        return;
+      if (orgData) {
+        setOrganizerId(orgData.id);
       }
-      setOrganizerId(orgData.id);
 
       // Fetch categories
       const { data: cats } = await supabase.from("categories").select("id, name");

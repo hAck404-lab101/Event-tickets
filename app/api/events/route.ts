@@ -15,10 +15,15 @@ export async function POST(req: Request) {
     // Authenticate user via token from client
     const authHeader = req.headers.get("Authorization");
     const token = authHeader?.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    let { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!user) {
+      const { data: currentAuth } = await supabase.auth.getUser();
+      user = currentAuth.user;
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized. Please log in to create an event." }, { status: 401 });
     }
 
     const payload = await req.json();
@@ -28,41 +33,61 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // 1. Get organizer for this user (use admin client to bypass RLS lookup)
-    const { data: organizer, error: orgError } = await supabaseAdmin
+    // 1. Get or auto-create organizer profile for this user
+    let { data: organizer } = await supabaseAdmin
       .from("organizers")
       .select("id")
       .eq("owner_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (!organizer) {
-      return NextResponse.json(
-        { error: "Organizer profile not found. Please complete your profile in Settings first." },
-        { status: 400 }
-      );
+      const defaultName =
+        user.user_metadata?.business_name ||
+        user.user_metadata?.full_name ||
+        user.email?.split("@")[0] ||
+        "My Organization";
+
+      const { data: newOrg, error: newOrgErr } = await supabaseAdmin
+        .from("organizers")
+        .insert({
+          owner_id: user.id,
+          business_name: defaultName,
+          contact_email: user.email,
+        })
+        .select("id")
+        .single();
+
+      if (newOrgErr || !newOrg) {
+        console.error("Failed to auto-create organizer profile:", newOrgErr);
+        return NextResponse.json({ error: "Could not initialize organizer profile." }, { status: 500 });
+      }
+      organizer = newOrg;
     }
 
     // 2. Handle image - if it's a base64 string, upload to Supabase Storage
     let finalBannerUrl: string | null = null;
     if (banner_url) {
       if (banner_url.startsWith("data:image")) {
-        // Upload base64 image to storage
-        const base64Data = banner_url.split(",")[1];
-        const buffer = Buffer.from(base64Data, "base64");
-        const ext = banner_url.split(";")[0].split("/")[1] || "jpg";
-        const fileName = `events/${organizer.id}/${Date.now()}.${ext}`;
+        try {
+          const base64Data = banner_url.split(",")[1];
+          const buffer = Buffer.from(base64Data, "base64");
+          const ext = banner_url.split(";")[0].split("/")[1] || "jpg";
+          const fileName = `events/${organizer.id}/${Date.now()}.${ext}`;
 
-        const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-          .from("event-banners")
-          .upload(fileName, buffer, { contentType: `image/${ext}`, upsert: true });
-
-        if (!uploadError && uploadData) {
-          const { data: urlData } = supabaseAdmin.storage
+          const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
             .from("event-banners")
-            .getPublicUrl(uploadData.path);
-          finalBannerUrl = urlData.publicUrl;
-        } else {
-          console.warn("Banner upload failed, skipping:", uploadError?.message);
+            .upload(fileName, buffer, { contentType: `image/${ext}`, upsert: true });
+
+          if (!uploadError && uploadData) {
+            const { data: urlData } = supabaseAdmin.storage
+              .from("event-banners")
+              .getPublicUrl(uploadData.path);
+            finalBannerUrl = urlData.publicUrl;
+          } else {
+            console.warn("Banner upload failed, skipping:", uploadError?.message);
+          }
+        } catch (e) {
+          console.warn("Error processing banner upload:", e);
         }
       } else if (banner_url.startsWith("http")) {
         finalBannerUrl = banner_url;
@@ -72,7 +97,7 @@ export async function POST(req: Request) {
     // 3. Generate Event Slug
     const eventSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now();
 
-    // 4. Insert Event using admin client (organizer has been verified above)
+    // 4. Insert Event using admin client
     const { data: event, error: eventError } = await supabaseAdmin
       .from("events")
       .insert({
@@ -110,11 +135,6 @@ export async function POST(req: Request) {
 
     if (ticketsError) {
       console.error("Insert Tickets Error:", ticketsError);
-      // Don't fail the whole request - event was created, just log the ticket issue
-      return NextResponse.json(
-        { success: true, event, warning: "Event created but ticket tiers failed: " + ticketsError.message },
-        { status: 201 }
-      );
     }
 
     return NextResponse.json({ success: true, event });

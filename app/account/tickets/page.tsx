@@ -6,18 +6,22 @@ export default async function MyTickets() {
   const supabase = createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // 1. Get user's orders
-  const { data: orders } = await supabase
-    .from('orders')
-    .select('id')
-    .eq('customer_id', user?.id);
-    
-  const orderIds = orders?.map(o => o.id) || [];
+  // 1. Get user's orders matching customer_id OR customer_email
+  let orderIds: string[] = [];
+  if (user) {
+    const userEmail = user.email?.toLowerCase();
+    const query = userEmail
+      ? supabase.from("orders").select("id").or(`customer_id.eq.${user.id},customer_email.ilike.${userEmail}`)
+      : supabase.from("orders").select("id").eq("customer_id", user.id);
+
+    const { data: orders } = await query;
+    orderIds = orders?.map((o) => o.id) || [];
+  }
 
   // 2. Get tickets for those orders
-  const { data: ticketsData } = orderIds.length > 0 
+  const { data: ticketsData } = orderIds.length > 0
     ? await supabase
-        .from('tickets')
+        .from("tickets")
         .select(`
           id, ticket_code, status, attendee_name,
           ticket_type:ticket_types(
@@ -26,8 +30,8 @@ export default async function MyTickets() {
           ),
           order:orders(reference, customer_name)
         `)
-        .in('order_id', orderIds)
-        .order('created_at', { ascending: false })
+        .in("order_id", orderIds)
+        .order("created_at", { ascending: false })
     : { data: [] };
 
   const tickets = ticketsData || [];
@@ -88,7 +92,7 @@ export default async function MyTickets() {
           <Ticket size={48} className="text-muted mb-4 opacity-50" />
           <h3 className="text-xl font-bold font-serif mb-2">No tickets found</h3>
           <p className="text-muted mb-6">You don't have any upcoming events.</p>
-          <Link href="/events" className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-colors">
+          <Link href="/events/explore" className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-colors">
             Find Events
           </Link>
         </div>
