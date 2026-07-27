@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Clock, Loader2, CheckCircle2, Smartphone, ShieldCheck, ExternalLink, RefreshCw, Copy, Check } from "lucide-react";
+import { Clock, Loader2, CheckCircle2, Coins, ShieldCheck, Copy, Check, QrCode } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -15,7 +15,6 @@ function PaymentPendingContent() {
 
   const [status, setStatus] = useState<"pending" | "paid" | "failed" | "timeout">("pending");
   const [order, setOrder] = useState<any>(null);
-  const [loadingOrder, setLoadingOrder] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const [copied, setCopied] = useState(false);
   const [dots, setDots] = useState(".");
@@ -57,7 +56,6 @@ function PaymentPendingContent() {
           setStatus("failed");
         }
       }
-      setLoadingOrder(false);
     };
 
     fetchOrder();
@@ -76,7 +74,7 @@ function PaymentPendingContent() {
 
       if (data?.payment_status === "paid") {
         setStatus("paid");
-        toast.success("Payment confirmed!");
+        toast.success("Crypto payment confirmed!");
         setTimeout(() => {
           router.push(`/payment/success?reference=${data.reference}&orderId=${data.id}`);
         }, 1200);
@@ -108,7 +106,7 @@ function PaymentPendingContent() {
       if (!res.ok) throw new Error(data.error || "Failed to confirm payment");
 
       setStatus("paid");
-      toast.success("Payment verified successfully!");
+      toast.success("Crypto payment verified successfully!");
       setTimeout(() => {
         router.push(`/payment/success?reference=${order.reference}&orderId=${order.id}`);
       }, 1200);
@@ -137,17 +135,17 @@ function PaymentPendingContent() {
               <Clock size={40} className="text-yellow-500 animate-pulse" />
             </div>
             <h1 className="text-3xl font-serif font-bold text-primary">
-              Processing Payment{dots}
+              Processing Crypto Payment{dots}
             </h1>
             <p className="text-muted text-sm max-w-sm mx-auto">
-              Follow the instructions below to complete your transaction.
+              Send USDT / Crypto via DoronX Smart Invoice to confirm your order.
             </p>
           </div>
 
           {/* Reference Card */}
           <div className="bg-background border border-border rounded-2xl p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted font-bold uppercase tracking-wider">Payment Reference</p>
+              <p className="text-xs text-muted font-bold uppercase tracking-wider">Invoice Reference</p>
               <p className="font-mono font-bold text-lg text-primary">{reference || order?.reference || "Loading..."}</p>
             </div>
             <button
@@ -167,8 +165,8 @@ function PaymentPendingContent() {
                 <strong className="text-primary font-bold">{order.events?.title || "Event Ticket"}</strong>
               </div>
               <div className="flex justify-between text-muted">
-                <span>Customer</span>
-                <strong className="text-primary font-bold">{order.customer_name} ({order.customer_phone})</strong>
+                <span>Buyer</span>
+                <strong className="text-primary font-bold">{order.customer_name}</strong>
               </div>
               <div className="flex justify-between text-muted pt-2 border-t border-border">
                 <span className="font-bold text-primary">Total Amount</span>
@@ -177,23 +175,31 @@ function PaymentPendingContent() {
             </div>
           )}
 
-          {/* MoMo Payment Instructions */}
+          {/* Crypto DoronX Payment Instructions */}
           <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 space-y-3 text-left">
             <div className="flex items-center gap-2 text-primary font-bold text-sm">
-              <Smartphone size={18} className="text-accent" />
-              <span>Mobile Money Payment Instructions</span>
+              <Coins size={18} className="text-accent" />
+              <span>DoronX Crypto Invoice Details</span>
             </div>
-            <ol className="text-xs text-muted space-y-2 list-decimal pl-4 leading-relaxed font-medium">
-              <li>Check your phone (<strong>{order?.customer_phone || "your mobile number"}</strong>) for an authorization prompt.</li>
-              <li>Enter your Mobile Money PIN to approve the payment of <strong>₵{order?.total ? Number(order.total).toFixed(2) : "0.00"}</strong>.</li>
-              <li>If you didn't receive a prompt, dial <strong>*170#</strong> (MTN) or <strong>*110#</strong> (Telecel/AirtelTigo), go to <em>My Wallet &gt; Approvals</em>, and approve the pending transaction.</li>
-            </ol>
+            <div className="space-y-2 text-xs text-muted font-medium">
+              <div className="flex justify-between py-1 border-b border-border">
+                <span>Asset / Currency</span>
+                <strong className="text-primary font-bold">USDT / USDC / BTC</strong>
+              </div>
+              <div className="flex justify-between py-1 border-b border-border">
+                <span>Supported Network</span>
+                <strong className="text-primary font-bold">TRC-20 / Solana / BEP-20</strong>
+              </div>
+              <p className="pt-2 text-muted leading-relaxed">
+                Send the exact USDT / Crypto equivalent for <strong>₵{order?.total ? Number(order.total).toFixed(2) : "0.00"}</strong> referencing <strong>{reference || order?.reference}</strong>.
+              </p>
+            </div>
           </div>
 
           {/* Polling Indicator */}
           <div className="flex items-center justify-center gap-2 text-muted text-xs font-medium">
             <Loader2 size={14} className="animate-spin text-primary" />
-            <span>Checking live payment confirmation automatically{dots}</span>
+            <span>Checking DoronX blockchain confirmation{dots}</span>
           </div>
 
           {/* Manual Action Buttons */}
@@ -205,11 +211,11 @@ function PaymentPendingContent() {
             >
               {verifying ? (
                 <>
-                  <Loader2 size={18} className="animate-spin" /> Verifying...
+                  <Loader2 size={18} className="animate-spin" /> Verifying Crypto Deposit...
                 </>
               ) : (
                 <>
-                  <ShieldCheck size={18} /> Confirm Payment / I Have Approved
+                  <ShieldCheck size={18} /> Confirm Crypto Payment / Verified
                 </>
               )}
             </button>
@@ -218,7 +224,7 @@ function PaymentPendingContent() {
               href="/account/orders"
               className="w-full bg-background border border-border text-primary py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:border-primary transition-colors block text-center"
             >
-              Check My Orders Page
+              View My Orders
             </Link>
           </div>
         </div>
@@ -229,8 +235,8 @@ function PaymentPendingContent() {
           <div className="w-20 h-20 bg-green-900/30 border-2 border-green-500 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle2 size={44} className="text-green-400" />
           </div>
-          <h1 className="text-3xl font-serif font-bold text-primary">Payment Confirmed!</h1>
-          <p className="text-muted text-sm">Your order has been paid. Generating your tickets now...</p>
+          <h1 className="text-3xl font-serif font-bold text-primary">Crypto Payment Confirmed!</h1>
+          <p className="text-muted text-sm">Your DoronX invoice has been settled. Generating your tickets now...</p>
           <div className="flex items-center justify-center gap-2 text-primary font-bold text-sm pt-2">
             <Loader2 size={16} className="animate-spin" />
             <span>Redirecting to your tickets...</span>
@@ -242,7 +248,7 @@ function PaymentPendingContent() {
         <div className="bg-surface border border-border rounded-3xl p-8 shadow-2xl text-center space-y-4">
           <h1 className="text-2xl font-serif font-bold text-red-400">Payment Unsuccessful</h1>
           <p className="text-muted text-sm">
-            We could not verify your payment for reference <strong className="font-mono text-primary">{reference}</strong>.
+            We could not verify your crypto payment for invoice reference <strong className="font-mono text-primary">{reference}</strong>.
           </p>
           <div className="flex gap-3 pt-4">
             <Link href="/events/explore" className="flex-1 bg-primary text-white py-3 rounded-xl font-bold text-sm">
