@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { ArrowRight, Loader2, KeyRound, Smartphone, User, Lock, Ticket } from "lucide-react";
+import { ArrowRight, Loader2, KeyRound, Smartphone, User, Lock, Ticket, Mail } from "lucide-react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { OtpInput } from "@/components/ui/OtpInput";
 import { formatPhoneNumber } from "@/lib/utils";
@@ -11,62 +12,50 @@ import { formatPhoneNumber } from "@/lib/utils";
 export default function RegisterPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"user" | "organizer">("user");
   const [otp, setOtp] = useState("");
   
   const [step, setStep] = useState<"details" | "otp">("details");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   
   const router = useRouter();
   const supabase = createClient();
   const [checkingPhone, setCheckingPhone] = useState(false);
 
+  // We still use checkingPhone for UX button disabling, but no inline errors.
+  const checkPhoneExists = async () => {
+    if (phone.length < 9) return;
+    const formattedPhone = formatPhoneNumber(phone);
+    setCheckingPhone(true);
+    try {
+      const res = await fetch("/api/auth/check-phone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: formattedPhone }),
+      });
+      const data = await res.json();
+      if (data.exists) {
+        toast.error("Phone number is already registered. Please log in.");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCheckingPhone(false);
+    }
+  };
+
   useEffect(() => {
-    const checkPhoneExists = async () => {
-      if (phone.length < 9) {
-        if (error === "Phone number is already registered. Please log in.") {
-          setError(null);
-        }
-        return;
-      }
-      
-      const formattedPhone = formatPhoneNumber(phone);
-
-      setCheckingPhone(true);
-      try {
-        const res = await fetch("/api/auth/check-phone", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: formattedPhone }),
-        });
-        const data = await res.json();
-        if (data.exists) {
-          setError("Phone number is already registered. Please log in.");
-        } else {
-          if (error === "Phone number is already registered. Please log in.") {
-            setError(null);
-          }
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setCheckingPhone(false);
-      }
-    };
-
     const timer = setTimeout(() => {
       checkPhoneExists();
     }, 500);
-
     return () => clearTimeout(timer);
   }, [phone]);
 
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setLoading(true);
-    setError(null);
     
     const formattedPhone = formatPhoneNumber(phone);
     
@@ -81,12 +70,9 @@ export default function RegisterPage() {
       if (!res.ok) throw new Error(data.error || "Failed to send SMS code.");
       
       setStep("otp");
+      toast.success(`Verification code sent to ${phone}`);
     } catch (err: any) {
-      let msg = err.message || "Failed to send SMS code. Please try again.";
-      if (typeof msg === 'string' && (msg === "{}" || msg.trim() === "")) {
-        msg = "Failed to send SMS code. Please try again.";
-      }
-      setError(msg);
+      toast.error(err.message || "Failed to send SMS code. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -95,7 +81,6 @@ export default function RegisterPage() {
   const handleVerifyAndRegister = async (e?: React.FormEvent, codeToVerify?: string) => {
     if (e) e.preventDefault();
     setLoading(true);
-    setError(null);
     
     const formattedPhone = formatPhoneNumber(phone);
 
@@ -104,7 +89,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/verify-register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: formattedPhone, otp: codeToVerify || otp, password, name, role }),
+        body: JSON.stringify({ phone: formattedPhone, email, otp: codeToVerify || otp, password, name, role }),
       });
 
       const data = await res.json();
@@ -119,6 +104,7 @@ export default function RegisterPage() {
       if (error) throw error;
 
       if (sessionData.session) {
+        toast.success("Account created successfully!");
         if (role === "organizer") {
            router.push("/organizer/dashboard");
         } else {
@@ -128,23 +114,17 @@ export default function RegisterPage() {
       }
     } catch (err: any) {
       console.error("Verification error:", err);
-      let msg = err.message || "Invalid code. Please try again.";
-      if (typeof msg === 'string' && (msg === "{}" || msg.trim() === "")) {
-        msg = "Invalid code or user already exists. Please try again.";
-      } else if (typeof msg === 'object') {
-        msg = JSON.stringify(msg);
-      }
-      setError(msg);
+      toast.error(err.message || "Invalid code. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <Link href="/" className="absolute top-8 left-8 text-2xl font-bold font-serif">Tixly</Link>
+    <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-4 sm:p-8">
+      <Link href="/" className="absolute top-6 left-6 text-2xl font-bold font-serif text-primary">Tixly</Link>
       
-      <div className="w-full max-w-md bg-surface p-8 rounded-3xl border border-border shadow-xl">
+      <div className="w-full max-w-md bg-surface p-6 sm:p-8 rounded-3xl border border-border shadow-xl mt-12 sm:mt-0">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-serif font-bold text-primary mb-2">
             {step === "details" ? "Create an account" : "Verify your number"}
@@ -155,12 +135,6 @@ export default function RegisterPage() {
               : `We sent a 6-digit code to ${phone}`}
           </p>
         </div>
-
-        {error && (
-          <div className="bg-error-bg text-error text-sm px-4 py-3 rounded-lg mb-6 font-medium">
-            {error}
-          </div>
-        )}
 
         {step === "details" ? (
           <form onSubmit={handleSendOtp} className="space-y-5">
@@ -207,6 +181,24 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-bold text-primary block">Email Address</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
+                  <Mail size={20} />
+                </div>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="john@example.com"
+                  className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors text-primary font-medium"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <label htmlFor="phone" className="text-sm font-bold text-primary block">Phone Number</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
@@ -245,7 +237,7 @@ export default function RegisterPage() {
             
             <button
               type="submit"
-              disabled={loading || checkingPhone || !phone || !password || !name || error === "Phone number is already registered. Please log in."}
+              disabled={loading || checkingPhone || !phone || !password || !name || !email}
               className={`w-full text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed group mt-4 ${role === 'organizer' ? 'bg-accent hover:bg-opacity-90' : 'bg-primary hover:bg-opacity-90'}`}
             >
               {loading ? (
@@ -267,7 +259,6 @@ export default function RegisterPage() {
                   setOtp(code);
                   handleVerifyAndRegister(undefined, code);
                 }} 
-                error={error} 
                 loading={loading}
                 onResend={() => handleSendOtp()}
               />

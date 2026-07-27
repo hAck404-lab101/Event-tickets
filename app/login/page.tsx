@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowRight, Loader2, KeyRound, Smartphone, Lock } from "lucide-react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { OtpInput } from "@/components/ui/OtpInput";
 import { formatPhoneNumber } from "@/lib/utils";
@@ -15,7 +16,6 @@ export default function LoginPage() {
   
   const [authMode, setAuthMode] = useState<"password" | "otp_request" | "otp_verify">("password");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   
   const router = useRouter();
   const supabase = createClient();
@@ -23,7 +23,6 @@ export default function LoginPage() {
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     
     const formattedPhone = formatPhoneNumber(phone);
     
@@ -47,7 +46,7 @@ export default function LoginPage() {
         router.refresh();
       }
     } catch (err: any) {
-      setError(err.message || "Invalid credentials. Please try again.");
+      toast.error(err.message || "Invalid credentials. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -56,7 +55,6 @@ export default function LoginPage() {
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setLoading(true);
-    setError(null);
     
     const formattedPhone = formatPhoneNumber(phone);
     
@@ -71,12 +69,9 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(data.error || "Failed to send SMS code. Please try again.");
       
       setAuthMode("otp_verify");
+      toast.success(`Verification code sent to ${phone}`);
     } catch (err: any) {
-      let msg = err.message || "Failed to send SMS code. Please try again.";
-      if (typeof msg === 'string' && (msg === "{}" || msg.trim() === "")) {
-        msg = "Failed to send SMS code. Please try again.";
-      }
-      setError(msg);
+      toast.error(err.message || "Failed to send SMS code. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -85,7 +80,6 @@ export default function LoginPage() {
   const handleVerifyOtp = async (e?: React.FormEvent, codeToVerify?: string) => {
     if (e) e.preventDefault();
     setLoading(true);
-    setError(null);
     const formattedPhone = formatPhoneNumber(phone);
 
     try {
@@ -117,21 +111,17 @@ export default function LoginPage() {
         router.refresh();
       }
     } catch (err: any) {
-      let msg = err.message || "Invalid code. Please try again.";
-      if (typeof msg === 'string' && (msg === "{}" || msg.trim() === "")) {
-        msg = "Invalid code. Please try again.";
-      }
-      setError(msg);
+      toast.error(err.message || "Invalid code. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <Link href="/" className="absolute top-8 left-8 text-2xl font-bold font-serif">Tixly</Link>
+    <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-4 sm:p-8">
+      <Link href="/" className="absolute top-6 left-6 text-2xl font-bold font-serif text-primary">Tixly</Link>
       
-      <div className="w-full max-w-md bg-surface p-8 rounded-3xl border border-border shadow-xl">
+      <div className="w-full max-w-md bg-surface p-6 sm:p-8 rounded-3xl border border-border shadow-xl mt-12 sm:mt-0">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-serif font-bold text-primary mb-2">
             {authMode === "password" ? "Welcome back" : authMode === "otp_request" ? "Login with Code" : "Verify your number"}
@@ -144,12 +134,6 @@ export default function LoginPage() {
               : `We sent a 6-digit code to ${phone}`}
           </p>
         </div>
-
-        {error && (
-          <div className="bg-error-bg text-error text-sm px-4 py-3 rounded-lg mb-6 font-medium">
-            {error}
-          </div>
-        )}
 
         {authMode === "password" && (
           <form onSubmit={handlePasswordLogin} className="space-y-6">
@@ -211,7 +195,7 @@ export default function LoginPage() {
               </Link>
               <button 
                 type="button" 
-                onClick={() => { setAuthMode("otp_request"); setError(null); }}
+                onClick={() => { setAuthMode("otp_request"); }}
                 className="text-sm font-bold text-muted hover:text-primary transition-colors"
               >
                 Log in with SMS code
@@ -257,7 +241,7 @@ export default function LoginPage() {
             <div className="text-center mt-4">
               <button 
                 type="button" 
-                onClick={() => { setAuthMode("password"); setError(null); }}
+                onClick={() => { setAuthMode("password"); }}
                 className="text-sm font-bold text-muted hover:text-primary transition-colors"
               >
                 Go back to password login
@@ -276,7 +260,6 @@ export default function LoginPage() {
                   setOtp(code);
                   handleVerifyOtp(undefined, code);
                 }} 
-                error={error} 
                 loading={loading}
                 onResend={() => handleSendOtp()}
               />
@@ -285,7 +268,7 @@ export default function LoginPage() {
             <div className="text-center mt-4 pt-4 border-t border-border">
               <button 
                 type="button" 
-                onClick={() => { setAuthMode("otp_request"); setError(null); }}
+                onClick={() => { setAuthMode("otp_request"); }}
                 className="text-sm font-bold text-muted hover:text-primary transition-colors"
               >
                 Change phone number

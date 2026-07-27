@@ -3,9 +3,9 @@ import { createServerClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   try {
-    const { phone, otp, password, name, role } = await req.json();
+    const { phone, email, otp, password, name, role } = await req.json();
 
-    if (!phone || !otp || !password || !name || !role) {
+    if (!phone || !otp || !password || !name || !role || !email) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -31,8 +31,10 @@ export async function POST(req: Request) {
     // 3. Create the user permanently
     const { error: createError } = await supabase.auth.admin.createUser({
       phone: phone,
+      email: email,
       password: password,
       phone_confirm: true,
+      email_confirm: true,
       user_metadata: {
         name: name,
         role: role // 'user' or 'organizer'
@@ -45,12 +47,6 @@ export async function POST(req: Request) {
         ? createError.message 
         : typeof createError === 'string' ? createError : "Failed to create user account. It may already exist.";
         
-      if (errorMessage.toLowerCase().includes("already registered") || errorMessage.toLowerCase().includes("already exists")) {
-        // Idempotency: User exists. Allow flow to proceed to signInWithPassword
-        // which will validate their password.
-        return NextResponse.json({ success: true, message: "User already exists, proceeding to login" });
-      }
-      
       return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 
