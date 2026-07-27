@@ -13,6 +13,7 @@ export default function EventCreateWizard() {
 
   // Step 1 State
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -60,7 +61,7 @@ export default function EventCreateWizard() {
 
   const validateStep = (currentStep: number) => {
     if (currentStep === 1) {
-      if (!title || !category || !imageBase64) {
+      if (!title || !description || !category || !imageBase64) {
         setError("Please fill out all fields and upload a banner image.");
         return false;
       }
@@ -100,6 +101,7 @@ export default function EventCreateWizard() {
 
       const payload = {
         title,
+        description,
         category,
         image_url: imageBase64,
         date: startsAt,
@@ -171,6 +173,16 @@ export default function EventCreateWizard() {
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Accra Tech Summit 2026" 
                   className="w-full border border-border rounded-lg p-3 outline-none focus:border-primary bg-background text-primary" 
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2">Description</label>
+                <textarea 
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Tell people what your event is about..." 
+                  className="w-full border border-border rounded-lg p-3 outline-none focus:border-primary bg-background text-primary min-h-[120px]" 
                 />
               </div>
               

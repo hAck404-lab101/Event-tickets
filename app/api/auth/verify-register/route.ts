@@ -41,7 +41,10 @@ export async function POST(req: Request) {
 
     if (createError) {
       console.error("Create User Error:", createError);
-      return NextResponse.json({ error: createError.message }, { status: 500 });
+      const errorMessage = typeof createError === 'object' && createError !== null && 'message' in createError 
+        ? createError.message 
+        : typeof createError === 'string' ? createError : "Failed to create user account. It may already exist.";
+      return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 
     // Return success. The client can now call signInWithPassword.

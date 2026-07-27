@@ -45,7 +45,11 @@ export default function RegisterPage() {
       
       setStep("otp");
     } catch (err: any) {
-      setError(err.message || "Failed to send SMS code. Please try again.");
+      let msg = err.message || "Failed to send SMS code. Please try again.";
+      if (typeof msg === 'string' && (msg === "{}" || msg.trim() === "")) {
+        msg = "Failed to send SMS code. Please try again.";
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -91,7 +95,14 @@ export default function RegisterPage() {
         router.refresh();
       }
     } catch (err: any) {
-      setError(err.message || "Invalid code. Please try again.");
+      console.error("Verification error:", err);
+      let msg = err.message || "Invalid code. Please try again.";
+      if (typeof msg === 'string' && (msg === "{}" || msg.trim() === "")) {
+        msg = "Invalid code or user already exists. Please try again.";
+      } else if (typeof msg === 'object') {
+        msg = JSON.stringify(msg);
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
