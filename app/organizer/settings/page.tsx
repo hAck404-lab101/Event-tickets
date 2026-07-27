@@ -34,14 +34,9 @@ export default function OrganizerSettingsPage() {
   const [city, setCity] = useState("");
   const [streetAddress, setStreetAddress] = useState("");
 
-  // Tab 3: Payout
-  const [payoutMethod, setPayoutMethod] = useState("Mobile Money");
-  const [momoNetwork, setMomoNetwork] = useState("MTN");
-  const [momoNumber, setMomoNumber] = useState("");
-  const [momoName, setMomoName] = useState("");
-  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [organizerId, setOrganizerId] = useState<string | null>(null);
   
   const router = useRouter();
   const supabase = createClient();
@@ -52,22 +47,31 @@ export default function OrganizerSettingsPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return router.push("/login");
 
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from("organizers")
           .select("*")
           .eq("owner_id", user.id)
-          .single();
+          .maybeSingle();
 
         if (data) {
+          setOrganizerId(data.id);
           setBusinessName(data.business_name || "");
-          setContactEmail(data.contact_email || "");
-          setDescription(data.description || "");
+          setOrganizerType(data.organizer_type || "Individual");
+          setContactEmail(data.contact_email || user.email || "");
           setPhone(data.contact_phone || "");
-        } else if (error && error.code !== 'PGRST116') {
-          console.error("Error fetching organizer:", error);
+          setDescription(data.description || "");
+          setWebsiteUrl(data.website_url || "");
+
+          setCountry(data.country || "Ghana");
+          setRegion(data.region || "");
+          setCity(data.city || "");
+          setStreetAddress(data.street_address || "");
+        } else {
+          setContactEmail(user.email || "");
+          setBusinessName(user.user_metadata?.business_name || user.user_metadata?.full_name || "");
         }
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching organizer settings:", err);
       } finally {
         setLoading(false);
       }
@@ -76,66 +80,78 @@ export default function OrganizerSettingsPage() {
     fetchOrganizer();
   }, [supabase, router]);
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const saveSettingsToDb = async (partialPayload: Record<string, any>, successMessage: string) => {
     setSaving(true);
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { data: existing } = await supabase
-        .from("organizers")
-        .select("id")
-        .eq("owner_id", user.id)
-        .single();
-
-      const payload = {
+      const fullPayload = {
+        owner_id: user.id,
         business_name: businessName,
+        organizer_type: organizerType,
         contact_email: contactEmail,
-        description,
         contact_phone: phone,
+        website_url: websiteUrl,
+        description,
+        country,
+        region,
+        city,
+        street_address: streetAddress,
+        ...partialPayload,
       };
 
-      if (existing) {
+      if (organizerId) {
         const { error } = await supabase
           .from("organizers")
-          .update(payload)
-          .eq("id", existing.id);
+          .update(fullPayload)
+          .eq("id", organizerId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data: inserted, error } = await supabase
           .from("organizers")
-          .insert({
-            owner_id: user.id,
-            ...payload
-          });
+          .insert(fullPayload)
+          .select("id")
+          .single();
         if (error) throw error;
+        if (inserted) setOrganizerId(inserted.id);
       }
-      toast.success("Profile saved successfully");
+
+      toast.success(successMessage);
     } catch (err: any) {
-      toast.error(err.message || "Failed to save profile");
+      console.error("Error saving organizer settings:", err);
+      toast.error(err.message || "Failed to save settings");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSaveLocation = async (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    // Simulate saving location since fields aren't in schema
-    await new Promise(r => setTimeout(r, 600));
-    toast.success("Location settings saved successfully");
-    setSaving(false);
+    await saveSettingsToDb(
+      {
+        business_name: businessName,
+        organizer_type: organizerType,
+        contact_email: contactEmail,
+        contact_phone: phone,
+        website_url: websiteUrl,
+        description,
+      },
+      "Profile saved successfully"
+    );
   };
 
-  const handleSavePayout = async (e: React.FormEvent) => {
+  const handleSaveLocation = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    // Simulate saving payout
-    await new Promise(r => setTimeout(r, 600));
-    toast.info("Payout settings will be verified before activation");
-    setSaving(false);
+    await saveSettingsToDb(
+      {
+        country,
+        region,
+        city,
+        street_address: streetAddress,
+      },
+      "Location settings saved successfully"
+    );
   };
 
   if (loading) {
@@ -150,7 +166,7 @@ export default function OrganizerSettingsPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-serif font-bold text-primary">Settings</h1>
-        <p className="text-muted mt-1">Manage your organizer profile and preferences.</p>
+        <p className="text-muted mt-1">Manage your organizer profile and location preferences.</p>
       </div>
 
       <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
@@ -166,12 +182,6 @@ export default function OrganizerSettingsPage() {
             className={`px-6 py-4 font-bold text-sm whitespace-nowrap ${activeTab === 'location' ? 'text-primary border-b-2 border-primary' : 'text-muted hover:text-primary'}`}
           >
             Location
-          </button>
-          <button 
-            onClick={() => setActiveTab('payout')}
-            className={`px-6 py-4 font-bold text-sm whitespace-nowrap ${activeTab === 'payout' ? 'text-primary border-b-2 border-primary' : 'text-muted hover:text-primary'}`}
-          >
-            Payout
           </button>
         </div>
 
@@ -315,74 +325,6 @@ export default function OrganizerSettingsPage() {
                 >
                   {saving && <Loader2 size={16} className="animate-spin" />}
                   {saving ? "Saving..." : "Save Location"}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {activeTab === 'payout' && (
-            <form onSubmit={handleSavePayout} className="max-w-2xl space-y-6 animate-in fade-in duration-200">
-              <div className="space-y-2">
-                <label className="text-sm font-bold block text-primary">Payout Method</label>
-                <select 
-                  value={payoutMethod}
-                  onChange={(e) => setPayoutMethod(e.target.value)}
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 outline-none focus:border-primary text-primary appearance-none"
-                >
-                  <option value="Mobile Money">Mobile Money</option>
-                  <option value="Bank Transfer">Bank Transfer</option>
-                </select>
-              </div>
-              
-              {payoutMethod === 'Mobile Money' && (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold block text-primary">Mobile Money Network</label>
-                    <select 
-                      value={momoNetwork}
-                      onChange={(e) => setMomoNetwork(e.target.value)}
-                      className="w-full bg-background border border-border rounded-xl px-4 py-3 outline-none focus:border-primary text-primary appearance-none"
-                    >
-                      <option value="MTN">MTN</option>
-                      <option value="Telecel">Telecel</option>
-                      <option value="AirtelTigo">AirtelTigo</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold block text-primary">Mobile Money Number</label>
-                    <input 
-                      type="tel" 
-                      required
-                      value={momoNumber}
-                      onChange={(e) => setMomoNumber(e.target.value)}
-                      placeholder="024 000 0000"
-                      className="w-full bg-background border border-border rounded-xl px-4 py-3 outline-none focus:border-primary text-primary" 
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold block text-primary">Account Name</label>
-                    <input 
-                      type="text" 
-                      required
-                      value={momoName}
-                      onChange={(e) => setMomoName(e.target.value)}
-                      placeholder="Name registered on the network"
-                      className="w-full bg-background border border-border rounded-xl px-4 py-3 outline-none focus:border-primary text-primary" 
-                    />
-                  </div>
-                </>
-              )}
-
-              <div className="pt-6 border-t border-border">
-                <button 
-                  type="submit" 
-                  disabled={saving}
-                  className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-70"
-                >
-                  {saving && <Loader2 size={16} className="animate-spin" />}
-                  Save
                 </button>
               </div>
             </form>
