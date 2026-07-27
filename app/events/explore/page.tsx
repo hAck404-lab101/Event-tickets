@@ -93,7 +93,18 @@ export default async function ExploreEventsPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {events.map((event: any) => {
+            {events.length === 0 ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-20 h-20 bg-surface border border-border rounded-full flex items-center justify-center text-muted mb-6 mx-auto">
+                  <Calendar size={36} />
+                </div>
+                <h3 className="text-2xl font-bold font-serif text-primary mb-3">No events found</h3>
+                <p className="text-muted max-w-md mx-auto">
+                  There are no events matching your filters right now. Check back soon or adjust your search!
+                </p>
+              </div>
+            ) : (
+              events.map((event: any) => {
                 const prices = event.ticketTypes?.map((t: any) => t.price) || [];
                 const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
                 
@@ -101,7 +112,7 @@ export default async function ExploreEventsPage() {
                 <Link href={`/events/${event.id}`} key={event.id} className="bg-surface rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group block">
                   <div className="h-48 bg-border relative overflow-hidden">
                     <img 
-                      src={event.image || `https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80`} 
+                      src={event.image || `/images/hero-concert.jpg`} 
                       alt={event.title} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -119,7 +130,7 @@ export default async function ExploreEventsPage() {
                       <Calendar size={14} /> {event.date}
                     </p>
                     <p className="text-muted text-sm flex items-center gap-1.5 mb-4">
-                      <MapPin size={14} /> {event.venue}, {event.city}
+                      <MapPin size={14} /> {event.city}
                     </p>
                     <div className="pt-4 border-t border-border flex justify-between items-center">
                       <span className="text-xs font-bold text-muted uppercase tracking-wider">Starting from</span>
@@ -127,7 +138,8 @@ export default async function ExploreEventsPage() {
                     </div>
                   </div>
                 </Link>
-              )})}
+              )})
+            )}
             </div>
             
             <div className="mt-12 text-center">

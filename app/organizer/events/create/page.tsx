@@ -136,14 +136,14 @@ export default function EventCreateWizard() {
       const token = session?.access_token;
 
       const payload = {
-        organizer_id: organizerId,
         title,
         description,
-        category, // ID or string
-        image_url: imageBase64,
-        date: startsAt,
-        end_date: endsAt,
-        location: `${venueName}, ${city}`,
+        category_id: category || null,
+        banner_url: imageBase64,  // API will upload to storage
+        starts_at: startsAt,
+        ends_at: endsAt || null,
+        city,
+        venue_name: venueName,
         tickets: tickets.map(t => ({
           name: t.name,
           price: parseFloat(t.price),

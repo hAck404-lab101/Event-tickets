@@ -19,6 +19,8 @@ export type Event = {
   city: string;
   image: string;
   organizer: string;
+  status: string;
+  startsAt: string;
   ticketTypes: TicketType[];
 };
 
@@ -27,12 +29,12 @@ export async function getEvents(): Promise<Event[]> {
   const { data, error } = await supabase
     .from("events")
     .select(`
-      *,
+      id, title, description, banner_url, city, starts_at, ends_at, status,
       categories(name),
       organizers(business_name),
-      ticket_types(*)
+      ticket_types(id, name, description, price, quantity_total, quantity_sold)
     `)
-    // .eq("status", "published") // Uncomment if you want to only show published events, but for dev it might be empty
+    .eq("status", "published")
     .order("starts_at", { ascending: true });
 
   if (error || !data) {
@@ -40,25 +42,7 @@ export async function getEvents(): Promise<Event[]> {
     return [];
   }
 
-  return data.map((e: any) => ({
-    id: e.id,
-    title: e.title,
-    description: e.description,
-    category: e.categories?.name || "Event",
-    date: new Date(e.starts_at).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
-    time: new Date(e.starts_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-    venue: e.location ? e.location.split(',')[0] : "Venue TBA",
-    city: e.location ? e.location.split(',')[1]?.trim() || "City TBA" : "City TBA",
-    image: e.image_url || e.banner_url || "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1600&q=85",
-    organizer: e.organizers?.business_name || "Organizer",
-    ticketTypes: e.ticket_types?.map((t: any) => ({
-      id: t.id,
-      name: t.name,
-      description: t.description || "",
-      price: Number(t.price),
-      quantityAvailable: t.quantity_total - t.quantity_sold
-    })) || []
-  }));
+  return data.map((e: any) => mapEvent(e));
 }
 
 export async function getEventById(id: string): Promise<Event | null> {
@@ -66,10 +50,10 @@ export async function getEventById(id: string): Promise<Event | null> {
   const { data: e, error } = await supabase
     .from("events")
     .select(`
-      *,
+      id, title, description, banner_url, city, starts_at, ends_at, status,
       categories(name),
       organizers(business_name),
-      ticket_types(*)
+      ticket_types(id, name, description, price, quantity_total, quantity_sold)
     `)
     .eq("id", id)
     .single();
@@ -79,24 +63,35 @@ export async function getEventById(id: string): Promise<Event | null> {
     return null;
   }
 
+  return mapEvent(e);
+}
+
+function mapEvent(e: any): Event {
+  const startsAt = e.starts_at ? new Date(e.starts_at) : null;
   return {
     id: e.id,
     title: e.title,
     description: e.description,
     category: e.categories?.name || "Event",
-    date: new Date(e.starts_at).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
-    time: new Date(e.starts_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-    venue: e.location ? e.location.split(',')[0] : "Venue TBA",
-    city: e.location ? e.location.split(',')[1]?.trim() || "City TBA" : "City TBA",
-    image: e.image_url || e.banner_url || "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1600&q=85",
+    date: startsAt
+      ? startsAt.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+      : "Date TBA",
+    time: startsAt
+      ? startsAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+      : "",
+    venue: "Venue TBA",
+    city: e.city || "City TBA",
+    image: e.banner_url || "/images/hero-concert.jpg",
     organizer: e.organizers?.business_name || "Organizer",
+    status: e.status || "published",
+    startsAt: e.starts_at || "",
     ticketTypes: e.ticket_types?.map((t: any) => ({
       id: t.id,
       name: t.name,
       description: t.description || "",
       price: Number(t.price),
-      quantityAvailable: t.quantity_total - t.quantity_sold
-    })) || []
+      quantityAvailable: (t.quantity_total || 0) - (t.quantity_sold || 0),
+    })) || [],
   };
 }
 

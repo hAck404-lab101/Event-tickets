@@ -130,21 +130,21 @@ export default async function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {events?.map((event: any) => {
-              const prices = event.ticket_types?.map((t: any) => t.price) || [];
+              const prices = event.ticketTypes?.map((t: any) => t.price) || [];
               const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-              const formattedDate = new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + new Date(event.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+              const formattedDate = `${event.date} · ${event.time}`;
               
               return (
               <Link href={`/events/${event.id}`} key={event.id} className="group block">
                 <div className="bg-background rounded-3xl overflow-hidden border border-border hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
                   <div className="h-64 relative overflow-hidden">
                     <img 
-                      src={event.image_url || '/images/hero-concert.jpg'} 
+                      src={event.image} 
                       alt={event.title} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
                     <div className="absolute top-4 left-4 bg-surface-glass backdrop-blur-sm text-primary px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide">
-                      {event.category || 'Event'}
+                      {event.category}
                     </div>
                   </div>
                   <div className="p-6">
@@ -153,7 +153,7 @@ export default async function HomePage() {
                     </p>
                     <h3 className="text-xl font-bold font-serif text-primary mb-3 group-hover:text-accent transition-colors">{event.title}</h3>
                     <p className="text-muted text-sm font-medium flex items-center gap-2 mb-6">
-                      <MapPin size={16} /> {event.location}
+                      <MapPin size={16} /> {event.city}
                     </p>
                     <div className="flex items-center justify-between pt-4 border-t border-border">
                       <div>
