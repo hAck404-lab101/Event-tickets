@@ -3,15 +3,17 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Clock, Loader2, CheckCircle2, Coins, ShieldCheck, Copy, Check, ExternalLink } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { toast } from "sonner";
 
 function PaymentPendingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const reference = searchParams.get("reference");
-  const orderId = searchParams.get("orderId");
+  const rawReference = searchParams.get("reference");
+  const rawOrderId = searchParams.get("orderId");
+
+  const reference = rawReference?.trim() || null;
+  const orderId = rawOrderId?.trim() || null;
 
   const [status, setStatus] = useState<"pending" | "paid" | "failed" | "timeout">("pending");
   const [order, setOrder] = useState<any>(null);
@@ -20,8 +22,6 @@ function PaymentPendingContent() {
   const [copied, setCopied] = useState(false);
   const [dots, setDots] = useState(".");
 
-  const supabase = createClient();
-
   useEffect(() => {
     const dotInterval = setInterval(() => {
       setDots((d) => (d.length >= 3 ? "." : d + "."));
@@ -29,66 +29,74 @@ function PaymentPendingContent() {
     return () => clearInterval(dotInterval);
   }, []);
 
-  // Fetch Order details from Supabase DB
+  // Fetch Order details via Admin API route (bypassing RLS)
   useEffect(() => {
     if (!reference && !orderId) return;
 
+    let isMounted = true;
+
     const fetchOrder = async () => {
       setLoadingOrder(true);
-      const query = supabase
-        .from("orders")
-        .select(`
-          *,
-          events(title, banner_url, city, starts_at)
-        `);
+      try {
+        const queryParam = reference ? `reference=${encodeURIComponent(reference)}` : `orderId=${encodeURIComponent(orderId || "")}`;
+        const res = await fetch(`/api/orders/check?${queryParam}`);
+        const data = await res.json();
 
-      if (reference) query.eq("reference", reference);
-      else if (orderId) query.eq("id", orderId);
-
-      const { data } = await query.maybeSingle();
-
-      if (data) {
-        setOrder(data);
-        if (data.payment_status === "paid") {
-          setStatus("paid");
-          setTimeout(() => {
-            router.push(`/payment/success?reference=${reference || data.reference}&orderId=${data.id}`);
-          }, 1200);
-        } else if (data.payment_status === "failed" || data.payment_status === "cancelled") {
-          setStatus("failed");
+        if (isMounted && res.ok && data.order) {
+          setOrder(data.order);
+          if (data.order.payment_status === "paid") {
+            setStatus("paid");
+            setTimeout(() => {
+              router.push(`/payment/success?reference=${reference || data.order.reference}&orderId=${data.order.id}`);
+            }, 1200);
+          } else if (data.order.payment_status === "failed" || data.order.payment_status === "cancelled") {
+            setStatus("failed");
+          }
         }
+      } catch (e) {
+        console.error("Failed to fetch pending order:", e);
+      } finally {
+        if (isMounted) setLoadingOrder(false);
       }
-      setLoadingOrder(false);
     };
 
     fetchOrder();
-  }, [reference, orderId, supabase, router]);
 
-  // Status Polling Loop
+    return () => {
+      isMounted = false;
+    };
+  }, [reference, orderId, router]);
+
+  // Live Polling Loop
   useEffect(() => {
     if (!reference && !orderId) return;
 
     const checkStatus = async () => {
-      const query = supabase.from("orders").select("payment_status, id, reference");
-      if (reference) query.eq("reference", reference);
-      else if (orderId) query.eq("id", orderId);
+      try {
+        const queryParam = reference ? `reference=${encodeURIComponent(reference)}` : `orderId=${encodeURIComponent(orderId || "")}`;
+        const res = await fetch(`/api/orders/check?${queryParam}`);
+        const data = await res.json();
 
-      const { data } = await query.maybeSingle();
-
-      if (data?.payment_status === "paid") {
-        setStatus("paid");
-        toast.success("Crypto payment confirmed!");
-        setTimeout(() => {
-          router.push(`/payment/success?reference=${data.reference}&orderId=${data.id}`);
-        }, 1200);
-      } else if (data?.payment_status === "failed" || data?.payment_status === "cancelled") {
-        setStatus("failed");
+        if (res.ok && data.order) {
+          setOrder((prev: any) => ({ ...prev, ...data.order }));
+          if (data.order.payment_status === "paid") {
+            setStatus("paid");
+            toast.success("Crypto payment confirmed!");
+            setTimeout(() => {
+              router.push(`/payment/success?reference=${data.order.reference}&orderId=${data.order.id}`);
+            }, 1200);
+          } else if (data.order.payment_status === "failed" || data.order.payment_status === "cancelled") {
+            setStatus("failed");
+          }
+        }
+      } catch (e) {
+        // silent loop catch
       }
     };
 
     const interval = setInterval(checkStatus, 4000);
     return () => clearInterval(interval);
-  }, [reference, orderId, supabase, router]);
+  }, [reference, orderId, router]);
 
   // Manually trigger Sandbox / Test completion
   const handleSimulatePayment = async () => {
@@ -129,11 +137,12 @@ function PaymentPendingContent() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const orderTotalFormatted = order?.total
-    ? `₵${Number(order.total).toFixed(2)}`
+  const totalNumber = Number(order?.total || 0);
+  const orderTotalFormatted = totalNumber > 0
+    ? `₵${totalNumber.toFixed(2)}`
     : loadingOrder
     ? "..."
-    : "₵0.00";
+    : "Calculating...";
 
   return (
     <div className="max-w-lg w-full">
@@ -168,27 +177,27 @@ function PaymentPendingContent() {
           </div>
 
           {/* Order Details */}
-          {loadingOrder ? (
+          {loadingOrder && !order ? (
             <div className="bg-surface-elevated border border-border rounded-2xl p-4 flex items-center justify-center gap-2 text-muted text-sm">
               <Loader2 size={16} className="animate-spin text-primary" />
               <span>Loading order summary...</span>
             </div>
-          ) : order ? (
+          ) : (
             <div className="bg-surface-elevated border border-border rounded-2xl p-4 space-y-2 text-sm">
               <div className="flex justify-between text-muted">
                 <span>Event</span>
-                <strong className="text-primary font-bold">{order.events?.title || "Event Ticket"}</strong>
+                <strong className="text-primary font-bold">{order?.events?.title || "Event Ticket"}</strong>
               </div>
               <div className="flex justify-between text-muted">
                 <span>Buyer</span>
-                <strong className="text-primary font-bold">{order.customer_name} ({order.customer_email})</strong>
+                <strong className="text-primary font-bold">{order?.customer_name || "Guest Customer"} {order?.customer_email ? `(${order.customer_email})` : ""}</strong>
               </div>
               <div className="flex justify-between text-muted pt-2 border-t border-border">
                 <span className="font-bold text-primary">Total Amount</span>
                 <strong className="text-lg font-serif text-primary font-bold">{orderTotalFormatted}</strong>
               </div>
             </div>
-          ) : null}
+          )}
 
           {/* DoronX Payment Instructions Card */}
           <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 space-y-3 text-left">

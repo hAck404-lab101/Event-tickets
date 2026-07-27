@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { LoaderCircle, Minus, Plus, Coins } from "lucide-react";
+import { LoaderCircle, Minus, Plus, Coins, ShieldCheck } from "lucide-react";
 import type { Event } from "@/lib/events";
 import { formatGhs } from "@/lib/events";
 
@@ -10,6 +10,7 @@ type Props = { event: Event };
 export default function TicketCheckout({ event }: Props) {
   const [ticketId, setTicketId] = useState(event.ticketTypes[0].id);
   const [quantity, setQuantity] = useState(1);
+  const [cryptoAsset, setCryptoAsset] = useState<"USDT" | "BTC">("USDT");
   const [customer, setCustomer] = useState({ name: "", email: "", phone: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -36,6 +37,8 @@ export default function TicketCheckout({ event }: Props) {
           quantity,
           unitPrice: ticket.price,
           paymentMethod: "crypto",
+          cryptoAsset: cryptoAsset,
+          cryptoNetwork: cryptoAsset === "USDT" ? "TRC20" : "BTC",
           customerEmail: customer.email,
           customerPhone: customer.phone,
           customerName: customer.name
@@ -107,15 +110,47 @@ export default function TicketCheckout({ event }: Props) {
         </div>
       </div>
 
-      {/* Payment Method Display */}
+      {/* Crypto Asset Selection */}
       <div className="mb-8">
-        <label className="block text-sm font-bold text-primary mb-3">Payment Method</label>
-        <div className="p-4 rounded-xl border border-primary bg-primary/10 text-primary flex items-center gap-3 font-bold text-sm">
-          <Coins size={20} className="text-accent" />
-          <div>
-            <p>Crypto Payment (DoronX Smart Invoice)</p>
-            <p className="text-xs text-muted font-normal mt-0.5">Pay with USDT / USDC / BTC / ETH</p>
-          </div>
+        <label className="block text-sm font-bold text-primary mb-3">Select Crypto Payment Asset</label>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setCryptoAsset("USDT")}
+            className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between ${
+              cryptoAsset === "USDT"
+                ? "border-primary bg-primary/10 ring-1 ring-primary text-primary"
+                : "border-border bg-background text-muted hover:border-primary/40"
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <Coins size={22} className="text-accent" />
+              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-primary/20 text-primary">TRC-20</span>
+            </div>
+            <div>
+              <strong className="block text-sm text-primary font-bold">USDT (Tether)</strong>
+              <span className="text-xs text-muted">Stablecoin (TRC20)</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCryptoAsset("BTC")}
+            className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between ${
+              cryptoAsset === "BTC"
+                ? "border-primary bg-primary/10 ring-1 ring-primary text-primary"
+                : "border-border bg-background text-muted hover:border-primary/40"
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <Coins size={22} className="text-yellow-500" />
+              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-yellow-900/30 text-yellow-500">Bitcoin</span>
+            </div>
+            <div>
+              <strong className="block text-sm text-primary font-bold">BTC (Bitcoin)</strong>
+              <span className="text-xs text-muted">Native Blockchain</span>
+            </div>
+          </button>
         </div>
       </div>
 
@@ -175,13 +210,13 @@ export default function TicketCheckout({ event }: Props) {
         disabled={loading}
       >
         {loading ? (
-          <><LoaderCircle className="animate-spin" size={20} /> Processing...</>
+          <><LoaderCircle className="animate-spin" size={20} /> Generating DoronX Invoice...</>
         ) : (
-          `Pay ${formatGhs(total)} via Crypto (DoronX)`
+          `Pay ${formatGhs(total)} via ${cryptoAsset}`
         )}
       </button>
       <p className="text-center text-muted text-xs font-medium mt-4">
-        You will be redirected to the secure DoronX Crypto Smart Invoice checkout page (USDT / BTC).
+        You will be redirected to the live DoronX Invoice link ({cryptoAsset} {cryptoAsset === 'USDT' ? 'TRC20' : 'BTC'}).
       </p>
     </form>
   );

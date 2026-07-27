@@ -12,6 +12,8 @@ export async function POST(request: Request) {
       quantity,
       unitPrice,
       paymentMethod = "crypto",
+      cryptoAsset = "USDT",
+      cryptoNetwork = "TRC20",
       customerEmail,
       customerPhone,
       customerName,
@@ -125,8 +127,8 @@ export async function POST(request: Request) {
           payerPhone: formattedPhone,
           amount: total,
           currency: "GHS",
-          asset: "USDT",
-          network: "TRC20",
+          asset: cryptoAsset, // 'USDT' or 'BTC'
+          network: cryptoNetwork, // 'TRC20' or 'BTC'
           description: `${quantity}x ${ticketName} - ${eventTitle || "Event Ticket"} (${reference})`,
           forceRateRefresh: true,
         }),
